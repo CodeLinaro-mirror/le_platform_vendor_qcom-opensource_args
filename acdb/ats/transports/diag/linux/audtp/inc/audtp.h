@@ -27,7 +27,7 @@
 
 /** Definitions for char_t, word, etc. */
 #ifndef ATS_USES_DUMMY_DIAG
-#include "comdef.h"
+#include "diag_comdef.h"
 #endif
 #include "audtpi.h"
 #include "diagcmd.h"
