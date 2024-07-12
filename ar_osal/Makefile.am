@@ -46,7 +46,7 @@ endif
 libar_osal_la_LIBADD = -lrt -lpthread
 
 if CUTILS_SUPPORTED
-libar_osal_la_LIBADD += -lcutils
+libar_osal_la_LIBADD += -lcutils -llog
 AM_CFLAGS += -DAR_OSAL_USE_CUTILS
 endif
 
