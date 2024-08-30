@@ -1,5 +1,5 @@
 #                                               -*- Autoconf -*-
-# configure.ac -- Autoconf script for spf
+# configure.ac -- Autoconf script for args
 #
 
 # Process this file with autoconf to produce a configure script
@@ -7,7 +7,7 @@
 # Requires autoconf tool later than 2.61
 AC_PREREQ(2.69)
 
-AC_INIT([arosp],1.0.1)
+AC_INIT([args],1.0.1)
 # Does not strictly follow GNU Coding standards
 AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
 LT_INIT
@@ -52,9 +52,9 @@ fi
 AM_CONDITIONAL(USE_GLIB, test "x${with_glib}" = "xyes")
 
 AC_ARG_WITH([cutils],
-    AS_HELP_STRING([Use cutils (default is yes)]),
+    AS_HELP_STRING([Use cutils (default is no)]),
      [with_cutils=$withval],
-     [with_cutils=yes])
+     [with_cutils=no])
 AM_CONDITIONAL([CUTILS_SUPPORTED], [test "x${with_cutils}" = "xyes"])
 
 AC_ARG_WITH([dummy_diag],
