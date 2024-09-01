@@ -87,7 +87,7 @@ ar_osal/ar_osal.pc
 ar_util/ar_util.pc
 acdb/acdb.pc
 acdb/ats/ats.pc
-gpr/gpr.pc
+gpr/ar_gpr.pc
 gsl/gsl.pc
 )
 

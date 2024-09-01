@@ -1,5 +1,5 @@
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = gpr.pc
+pkgconfig_DATA = ar_gpr.pc
 EXTRA_DIST = $(pkgconfig_DATA)
 
 AM_CFLAGS = -Wall
@@ -51,18 +51,18 @@ gpr_c_sources =  ./core/src/gpr_drv.c \
 lib_includedir = $(includedir)
 lib_include_HEADERS = $(gpr_sources)
 
-lib_LTLIBRARIES = libgpr.la
-libgpr_la_CC = @CC@
-libgpr_la_LIBADD = -lpthread $(top_builddir)/ar_osal/libar_osal.la
+lib_LTLIBRARIES = libar_gpr.la
+libar_gpr_la_CC = @CC@
+libar_gpr_la_LIBADD = -lpthread $(top_builddir)/ar_osal/libar_osal.la
 if USE_GLIB
-libgpr_la_LIBADD += -lglib-2.0
+libar_gpr_la_LIBADD += -lglib-2.0
 AM_CFLAGS += $(GLIB_CFLAGS) -Dstrlcpy=g_strlcpy -include glib.h
 endif
 if CUTILS_SUPPORTED
-libgpr_la_LIBADD += -lcutils
+libar_gpr_la_LIBADD += -lcutils
 AM_CFLAGS += -DGPR_USE_CUTILS
 endif
-libgpr_la_SOURCES = $(gpr_c_sources)
-libgpr_la_CFLAGS = $(AM_CFLAGS)
-libgpr_la_LDFLAGS = -shared -avoid-version
+libar_gpr_la_SOURCES = $(gpr_c_sources)
+libar_gpr_la_CFLAGS = $(AM_CFLAGS)
+libar_gpr_la_LDFLAGS = -shared -avoid-version
 
