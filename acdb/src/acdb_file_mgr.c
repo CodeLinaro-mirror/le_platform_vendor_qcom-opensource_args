@@ -877,6 +877,7 @@ int32_t AcdbFileManQwspFileIO(
         break;
     case ACDB_FM_FILE_OP_CLOSE:
         status = ar_fclose(ws_info->file_handle);
+        ws_info->file_handle = NULL;
         if (AR_FAILED(status))
         {
             ACDB_ERR("Error[%d]: Failed to close the workspace file", status);
