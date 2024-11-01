@@ -23,4 +23,4 @@ lib_LTLIBRARIES = libar_util.la
 libar_util_la_CC = @CC@
 libar_util_la_SOURCES = $(util_c_sources)
 libar_util_la_CFLAGS = $(AM_CFLAGS)
-libar_util_la_LDFLAGS = -shared -avoid-version
+libar_util_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@

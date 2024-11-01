@@ -65,4 +65,4 @@ lib_LTLIBRARIES = libar_osal.la
 libar_osal_la_CC = @CC@
 libar_osal_la_SOURCES = $(osal_c_sources)
 libar_osal_la_CFLAGS = $(AM_CFLAGS)
-libar_osal_la_LDFLAGS = -shared -avoid-version
+libar_osal_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@

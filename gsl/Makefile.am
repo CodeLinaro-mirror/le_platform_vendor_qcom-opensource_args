@@ -55,5 +55,5 @@ libar_gsl_la_CC = @CC@
 libar_gsl_la_LIBADD = $(top_builddir)/acdb/libacdb.la $(top_builddir)/ar_osal/libar_osal.la $(top_builddir)/ar_util/libar_util.la $(top_builddir)/spf/libspfheaders.la $(top_builddir)/gpr/libar_gpr.la
 libar_gsl_la_SOURCES = $(gsl_c_sources)
 libar_gsl_la_CFLAGS = $(AM_CFLAGS)
-libar_gsl_la_LDFLAGS = -shared -avoid-version
+libar_gsl_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@
 

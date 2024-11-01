@@ -64,5 +64,5 @@ AM_CFLAGS += -DGPR_USE_CUTILS
 endif
 libar_gpr_la_SOURCES = $(gpr_c_sources)
 libar_gpr_la_CFLAGS = $(AM_CFLAGS)
-libar_gpr_la_LDFLAGS = -shared -avoid-version
+libar_gpr_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@
 

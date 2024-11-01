@@ -72,4 +72,4 @@ endif
 libats_la_SOURCES = $(ats_c_sources)
 libats_la_CFLAGS = $(AM_CFLAGS)
 libats_la_CPPFLAGS = $(AM_CPPFLAGS)
-libats_la_LDFLAGS = -shared -avoid-version
+libats_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@

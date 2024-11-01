@@ -5,6 +5,6 @@ includedir=@includedir@
 
 Name: ar_util
 Description: ar_util library
-Version: @VERSION@
+Version: @LT_VERSION@
 Libs: -L${libdir} -lar_util
 Cflags: -I${includedir}
