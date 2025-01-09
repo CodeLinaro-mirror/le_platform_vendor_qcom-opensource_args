@@ -1,0 +1,37 @@
+Source: qcom-args
+Section: misc
+Priority: optional
+Maintainer: Sairamreddy Bojja <quic_sbojja@quicinc.com>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ libglib2.0-0,
+ linux-libc-dev-qcom,
+ qcom-libdiag-dev,
+ qcom-libdiag,
+ qcom-diag-router,
+ libglib2.0-dev,
+Standards-Version: 4.6.2
+Homepage: https://git.codelinaro.org/clo/le/platform/vendor/qcom-opensource/args
+
+Package: qcom-args
+Architecture: arm64
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ libglib2.0-0,
+ qcom-libdiag-dev,
+ qcom-libdiag,
+ qcom-diag-router,
+Description: Qualcomm args audio stack
+ Firmware and shared libraries package.
+
+Package: qcom-args-dev
+Section: libdevel
+Architecture: arm64
+Depends:
+ qcom-args (= ${binary:Version}),
+ ${misc:Depends},
+ qcom-libdiag-dev,
+Description: Qualcomm args audio stack development headers
+ Headers-only package.
