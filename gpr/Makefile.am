@@ -56,7 +56,7 @@ libar_gpr_la_CC = @CC@
 libar_gpr_la_LIBADD = -lpthread $(top_builddir)/ar_osal/libar_osal.la
 if USE_GLIB
 libar_gpr_la_LIBADD += -lglib-2.0
-AM_CFLAGS += $(GLIB_CFLAGS) -Dstrlcpy=g_strlcpy -include glib.h
+AM_CFLAGS += $(GLIB_CFLAGS) -include glib.h
 endif
 if CUTILS_SUPPORTED
 libar_gpr_la_LIBADD += -lcutils

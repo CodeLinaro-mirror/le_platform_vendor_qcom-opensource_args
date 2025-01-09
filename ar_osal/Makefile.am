@@ -52,7 +52,7 @@ endif
 
 if USE_GLIB
 libar_osal_la_LIBADD += -lglib-2.0
-AM_CFLAGS += $(GLIB_CFLAGS) -D_GNU_SOURCE -Dstrlcat=g_strlcat -Dstrlcpy=g_strlcpy -include glib.h
+AM_CFLAGS += $(GLIB_CFLAGS) -D_GNU_SOURCE -include glib.h
 endif
 
 if ION_DRIVER_NOT_SUPPORTED

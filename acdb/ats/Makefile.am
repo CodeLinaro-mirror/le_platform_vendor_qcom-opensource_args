@@ -6,7 +6,7 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -Wall \
             -Wundef \
             -O2
-AM_CFLAGS += @GLIB_CFLAGS@ -Dstrlcpy=g_strlcpy -Dstrlcat=g_strlcat -include glib.h
+AM_CFLAGS += @GLIB_CFLAGS@ -include glib.h
 
 AM_CFLAGS += -I$(top_srcdir)/ar_osal/api \
              -I$(top_srcdir)/acdb/api \
