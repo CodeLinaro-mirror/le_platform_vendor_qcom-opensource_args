@@ -144,4 +144,4 @@ lib_LTLIBRARIES = libspfheaders.la
 libspfheaders_la_CC = @CC@
 libspfheaders_la_SOURCES = $(spf_sources) $(asps_sources)
 libspfheaders_la_CFLAGS = $(AM_CFLAGS)
-libspfheaders_la_LDFLAGS = -shared -avoid-version
+libspfheaders_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@

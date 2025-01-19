@@ -56,7 +56,7 @@ libar_gpr_la_CC = @CC@
 libar_gpr_la_LIBADD = -lpthread $(top_builddir)/ar_osal/libar_osal.la
 if USE_GLIB
 libar_gpr_la_LIBADD += -lglib-2.0
-AM_CFLAGS += $(GLIB_CFLAGS) -Dstrlcpy=g_strlcpy -include glib.h
+AM_CFLAGS += $(GLIB_CFLAGS) -include glib.h
 endif
 if CUTILS_SUPPORTED
 libar_gpr_la_LIBADD += -lcutils
@@ -64,5 +64,5 @@ AM_CFLAGS += -DGPR_USE_CUTILS
 endif
 libar_gpr_la_SOURCES = $(gpr_c_sources)
 libar_gpr_la_CFLAGS = $(AM_CFLAGS)
-libar_gpr_la_LDFLAGS = -shared -avoid-version
+libar_gpr_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@
 

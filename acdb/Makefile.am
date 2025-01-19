@@ -48,5 +48,5 @@ libacdb_la_CC = @CC@
 libacdb_la_LIBADD = -lar_osal -L$(top_builddir)/ar_osal
 libacdb_la_SOURCES = $(acdb_c_sources)
 libacdb_la_CFLAGS = $(AM_CFLAGS)
-libacdb_la_LDFLAGS = -shared -avoid-version
+libacdb_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@
 

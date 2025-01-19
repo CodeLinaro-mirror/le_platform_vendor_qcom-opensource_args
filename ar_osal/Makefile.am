@@ -52,7 +52,7 @@ endif
 
 if USE_GLIB
 libar_osal_la_LIBADD += -lglib-2.0
-AM_CFLAGS += $(GLIB_CFLAGS) -D_GNU_SOURCE -Dstrlcat=g_strlcat -Dstrlcpy=g_strlcpy -include glib.h
+AM_CFLAGS += $(GLIB_CFLAGS) -D_GNU_SOURCE -include glib.h
 endif
 
 if ION_DRIVER_NOT_SUPPORTED
@@ -65,4 +65,4 @@ lib_LTLIBRARIES = libar_osal.la
 libar_osal_la_CC = @CC@
 libar_osal_la_SOURCES = $(osal_c_sources)
 libar_osal_la_CFLAGS = $(AM_CFLAGS)
-libar_osal_la_LDFLAGS = -shared -avoid-version
+libar_osal_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@

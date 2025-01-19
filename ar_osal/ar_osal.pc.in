@@ -5,6 +5,6 @@ includedir=@includedir@
 
 Name: ar_osal
 Description: ar osal library
-Version: @VERSION@
+Version: @LT_VERSION@
 Libs: -L${libdir} -lar_osal
 Cflags: -I${includedir}
