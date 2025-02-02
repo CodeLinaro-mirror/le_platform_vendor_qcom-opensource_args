@@ -1,0 +1,4 @@
+usr/include/*.h
+usr/include/*/*.h
+usr/include/*/*/*.h
+usr/lib/*/pkgconfig/*.pc
