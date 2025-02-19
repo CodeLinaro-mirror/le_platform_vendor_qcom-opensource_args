@@ -6,7 +6,7 @@
  *       state registration.
  *
  * \copyright
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -341,7 +341,7 @@ ar_osal_servreg_t ar_osal_servreg_register(_In_ ar_osal_client_type  client_type
     _In_ ar_osal_servreg_entry_type *service)
 {
 #ifndef AR_OSAL_USE_PD_NOTIFIER
-    return 1;
+    return (void *)1;
 #else
     int32_t status = AR_EOK;
     //ar_osal_servreg_t* handle = NULL;
