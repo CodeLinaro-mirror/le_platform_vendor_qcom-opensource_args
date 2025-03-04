@@ -6,7 +6,7 @@
  *  	 This file contains Public APIs for Splitter-Renderer module.
  * 
  * \copyright
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 // clang-format off
@@ -452,6 +452,143 @@ struct param_id_spr_ctrl_to_data_port_map_t
 ;
 
 typedef struct param_id_spr_ctrl_to_data_port_map_t param_id_spr_ctrl_to_data_port_map_t;
+
+#define PARAM_ID_SPR_SHARED_MEMORY_INFO 0x08001B15
+
+/*# @h2xmlp_parameter   {"PARAM_ID_SPR_SHARED_MEMORY_INFO",
+                          PARAM_ID_SPR_SHARED_MEMORY_INFO}
+    @h2xmlp_description {ID for the parameter that configures the shared memory info \n
+						}
+    @h2xmlp_toolPolicy  {NO_SUPPORT} */
+
+/** @ingroup ar_spf_mod_spr_mod
+    Payload of the #PARAM_ID_SPR_SHARED_MEMORY_INFO parameter.
+ */
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_spr_shared_memory_info_t
+{
+   uint32_t shared_memory_addr_lsw;
+   /**< @h2xmle_description {Lower 32 bits of the address of the shared memory.}
+     @h2xmle_default     {0}
+     @h2xmle_range       { 0..0xFFFFFFFF }
+     @h2xmle_policy      {Basic} */
+
+   uint32_t shared_memory_addr_msw;
+   /**< @h2xmle_description {Upper 32 bits of the address of the shared memory.}
+     @h2xmle_default     {0}
+     @h2xmle_range       { 0..0xFFFFFFFF }
+     @h2xmle_policy      {Basic} */
+
+   uint32_t shared_mem_map_handle;
+   /**< @h2xmle_description {Unique identifier for the shared memory address of shared memory.
+     The spf returns this handle through #APM_CMD_RSP_SHARED_MEM_MAP_REGIONS.}
+     @h2xmle_default     {0}
+     @h2xmle_range       { 0..0xFFFFFFFF }
+     @h2xmle_policy      {Basic} */
+
+   uint32_t shared_memory_size;
+   /**< @h2xmle_description {Number of bytes in the shared memory.}
+     @h2xmle_default     {0}
+     @h2xmle_range       { 0..0xFFFFFFFF }
+     @h2xmle_policy      {Basic} */
+
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+typedef struct param_id_spr_shared_memory_info_t param_id_spr_shared_memory_info_t;
+
+#define PARAM_ID_SPR_SESSION_TIME_V2                         0x08001B14
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/*# @h2xmlp_parameter   {"PARAM_ID_SPR_SESSION_TIME_V2",
+                          PARAM_ID_SPR_SESSION_TIME_V2}
+    @h2xmlp_description {Identifier for the Get parameter used to query the
+                         session time. This parameter provides information
+                         related to the current session time. For more
+                         details, see AudioReach Signal Processing Framework
+                         SPF) API Reference.}
+    @h2xmlp_toolPolicy  {NO_SUPPORT} */
+
+/** @ingroup ar_spf_mod_spr_mod
+    Payload of the #PARAM_ID_SPR_SESSION_TIME_V2 parameter.
+ */
+#include "spf_begin_pack.h"
+struct param_id_spr_session_time_v2_t
+{
+   time_us_t session_time;
+   /**< Value of the current session time in microseconds. */
+
+   /*#< @h2xmle_description {Value of the current session time in
+     microseconds.}
+     @h2xmle_range       {0..0xFFFFFFFF}
+     @h2xmle_default     {0} */
+
+   time_us_t absolute_time;
+   /**< Value of the absolute time in microseconds when the sample that
+     corresponds to the session time is rendered at the hardware.
+
+     This time can be slightly in the future or past depending on when this
+     parameter is queried. */
+
+   /*#< @h2xmle_description {Value of the absolute time in microseconds when
+     the sample that corresponds to the session time is
+     rendered at the hardware. This time can be
+     slightly in the future or past depending on when
+     this parameter is queried.}
+     @h2xmle_range       {0..0xFFFFFFFF}
+     @h2xmle_default     {0} */
+
+   time_us_t timestamp;
+   /**< Value of the last processed timestamp in microseconds. The 64-bit
+     number is treated as signed. */
+
+   /*#< @h2xmle_description {Value of the last processed timestamp in
+     microseconds. The 64-bit number is treated as
+     signed.}
+     @h2xmle_range       {0..0xFFFFFFFF}
+     @h2xmle_default     {0} */
+
+   uint32_t flags;
+   /**< Configures additional properties associated with this payload.
+
+     @valuesbul{for bit 31}
+     - 0 -- Value of last processed timestamp is invalid/uninitialized
+     - 1 -- Value of last processed timestamp is valid/initialized
+
+     All other bits are reserved and are set to 0. */
+
+   /*#< @h2xmle_description {Configures additional properties associated with
+     this payload. Bit 31 indicates whether the
+     timestamp is valid (1) or not (0). All other bits
+     are reserved and are set to 0.}
+     @h2xmle_rangeList   {"TS_INVALID"=0x00000000;
+     "TS_VALID"=0x80000000}
+     @h2xmle_default     {0} */
+
+   uint32_t underrun_flag;
+   /**< Flag to indicate if SPR is underrunning */
+
+   /*#< @h2xmle_description {Flag to indicate if SPR is underrunning}
+     @h2xmle_range       {0,1}
+     @h2xmle_default     {0} */
+
+   time_us_t ref_timestamp;
+   /**< The timestamp at which the absolute time and session time was computed.
+     The timestamp is in microsecond and is stored in 64bit*/
+
+   /*#< @h2xmle_description {The timestamp at which the absolute time
+     and session time was computed.}
+     @h2xmle_range       {0..0xFFFFFFFF}
+     @h2xmle_default     {0} */
+}
+#include "spf_end_pack.h"
+;
+typedef struct param_id_spr_session_time_v2_t param_id_spr_session_time_v2_t;
 
 /* Indicates that the underrun occurred due to input not being available */
 #define UNDERRUN_STATUS_INPUT_NOT_AVAILABLE      0x1
