@@ -7,7 +7,7 @@
  * \brief
  *      Implement data path handling for Graph Service Layer (GSL)
  *
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -325,6 +325,15 @@ int32_t gsl_dp_get_pos_buff_info(struct gsl_data_path_info *dp_info,
  * \return the number of processed buffers
  */
 uint32_t gsl_dp_get_processed_buff_cnt(struct gsl_data_path_info *dp_info);
+
+/**
+ * \brief get available buffer size for a graph path
+ *
+ * \param[in] dp_info: pointer to a datapath
+ *
+ * \return the size of available buffer (in bytes)
+ */
+uint32_t gsl_dp_get_avail_buffer_size(struct gsl_data_path_info *dp_info);
 
 /**
  * \brief wait for all buffers to come back on a datapath

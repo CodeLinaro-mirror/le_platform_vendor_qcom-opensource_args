@@ -5,7 +5,7 @@
  *      Main entry point for Graph Service Layer (GSL)
  *
  * \copyright
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #include "gsl_intf.h"
@@ -2273,6 +2273,28 @@ int32_t gsl_get_processed_buff_cnt(gsl_handle_t graph_handle,
 		*cnt = gsl_dp_get_processed_buff_cnt(&graph->read_info);
 	else
 		*cnt = gsl_dp_get_processed_buff_cnt(&graph->write_info);
+
+	return AR_EOK;
+}
+
+int32_t gsl_get_avail_buffer_size(gsl_handle_t graph_handle, enum gsl_data_dir dir,
+	    uint32_t *bytes)
+{
+	struct gsl_graph *graph;
+
+	// no need to synchronize with rtgm as it doesnt do anything with spf 
+
+	graph = to_gsl_graph(graph_handle);
+	if (!graph)
+		return AR_EBADPARAM;
+
+	if (gsl_graph_get_state(graph) == GRAPH_ERROR)
+		return AR_ESUBSYSRESET;
+
+	if (dir == GSL_DATA_DIR_READ)
+		*bytes = gsl_dp_get_avail_buffer_size(&graph->read_info);
+	else
+		*bytes = gsl_dp_get_avail_buffer_size(&graph->write_info);
 
 	return AR_EOK;
 }
