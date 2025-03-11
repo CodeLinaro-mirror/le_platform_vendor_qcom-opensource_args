@@ -16,6 +16,8 @@ Homepage: https://git.codelinaro.org/clo/le/platform/vendor/qcom-opensource/args
 
 Package: qcom-args
 Architecture: arm64
+Replaces: args0
+Breaks: args0
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
@@ -29,6 +31,8 @@ Description: Qualcomm args audio stack
 Package: qcom-args-dev
 Section: libdevel
 Architecture: arm64
+Replaces: args-dev
+Breaks: args-dev
 Depends:
  qcom-args (= ${binary:Version}),
  ${misc:Depends},
