@@ -191,6 +191,10 @@ enum gsl_cmd_id {
 	 * and property_values
 	 */
 	GSL_CMD_CLOSE_WITH_PROPS = 0x15,
+	/** Allocate shared memory for SPR module. */
+	GSL_CMD_SHARED_MEM_CUSTOM_ALLOC_MAP = 0x16,
+	/** Allocate shared memory for SPR module. */
+	GSL_CMD_SHARED_MEM_CUSTOM_DEALLOC_MAP = 0x17,
 	GSL_CMD_MAX
 };
 

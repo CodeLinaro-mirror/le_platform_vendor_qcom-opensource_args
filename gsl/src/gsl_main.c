@@ -38,6 +38,7 @@
 #include "apm_graph_properties.h"
 #include <string.h>
 #include <stdio.h>
+#include "spr_api.h"
 
 #if defined(GSL_LOG_PKT_ENABLE) || defined(GSL_LOG_DATA_ENABLE)
 ar_fhandle pkt_log_fd = NULL;
@@ -117,6 +118,26 @@ static struct gsl_ctxt_ {
 	bool_t rtc_conn_active;
 	/**< whether there is an active RTC session or not */
 } gsl_ctxt;
+
+ar_list_t gsl_shmem_list;
+
+typedef struct gsl_input_payload{
+	void* addr;
+	uint32_t size;
+	uint32_t miid;
+}gsl_input_payload_t;
+
+
+//  This should be cached in GSL as a list for identifying the region.
+typedef struct gsl_operating_payload{
+	gsl_input_payload_t *gsl_input_payload;
+	struct gsl_shmem_alloc_data *shmem_operating_info;
+}gsl_operating_payload_t;
+
+typedef struct shmem_link_node {
+	struct ar_list_node_t node;
+	struct gsl_shmem_alloc_data *shmem;
+}shmem_link_node_t;
 
 static inline gsl_handle_t to_gsl_handle(uint8_t index)
 {
@@ -1161,6 +1182,10 @@ int32_t gsl_init(struct gsl_init_data *init_data)
 		goto dyn_module_mgr_deinit;
 	}
 
+	if (ar_list_init(&gsl_shmem_list, NULL, NULL) != 0) {
+		GSL_ERR("Failed to initilize SPR shmem list");
+	}
+
 	for (i = AR_SUB_SYS_ID_FIRST; i <= AR_SUB_SYS_ID_LAST; i++)
 		gsl_ctxt.spf_restart[i] = FALSE;
 
@@ -1264,6 +1289,7 @@ void gsl_deinit(void)
 	gpr_deinit();
 	GSL_PKT_LOG_CLOSE();
 	GSL_PKT_LOG_DEINIT();
+	ar_list_clear(&gsl_shmem_list);
 	ar_log_deinit();
 }
 
@@ -1629,6 +1655,88 @@ exit:
 	return rc;
 }
 
+int32_t gsl_shmem_custom_alloc(gsl_input_payload_t *gsl_input_payload, struct gsl_shmem_alloc_data *gsl_map_data){
+	int32_t rc = AR_EOK;
+	uint32_t size = gsl_input_payload->size;
+	uint32_t master_proc_id = AR_AUDIO_DSP;
+	shmem_link_node_t *shmem_node = (shmem_link_node_t*)calloc(1, sizeof(shmem_link_node_t));
+
+	if (!size) {
+		rc = AR_EBADPARAM;
+		goto fail;
+	}
+
+	shmem_node->shmem = (struct gsl_shmem_alloc_data*)calloc(1, sizeof(struct gsl_shmem_alloc_data));
+	gsl_memset(shmem_node->shmem, 0, sizeof(struct gsl_shmem_alloc_data));
+
+	rc = gsl_shmem_alloc_ext(size, GSL_GET_SPF_SS_MASK(master_proc_id), GSL_SHMEM_MAP_UNCACHED, 0,
+            master_proc_id, shmem_node->shmem);
+	if (!rc) {
+		gsl_map_data->spf_mmap_handle = shmem_node->shmem->spf_mmap_handle;
+		gsl_map_data->handle = shmem_node->shmem->handle;
+		gsl_map_data->v_addr = shmem_node->shmem->v_addr;
+		gsl_map_data->spf_addr = shmem_node->shmem->spf_addr;
+		gsl_map_data->metadata = shmem_node->shmem->metadata;
+
+		ar_list_init_node(&shmem_node->node);
+		ar_list_add_tail(&gsl_shmem_list, &shmem_node->node);
+		return rc;
+	}
+
+fail:
+	free(shmem_node);
+    return rc;
+}
+
+int32_t gsl_setparam_to_spr(gsl_handle_t graph_handle, gsl_operating_payload_t *payload){
+	uint8_t* payloadInfo = NULL;
+	size_t payloadSize = 0, padBytes = 0;
+	int32_t rc = AR_EOK;
+	struct param_id_spr_shared_memory_info_t *spf_payload;
+	struct apm_module_param_data_t* header;
+
+	payloadSize = GSL_ALIGN_8BYTE(sizeof(struct apm_module_param_data_t) +
+            sizeof(struct param_id_spr_shared_memory_info_t));
+	payloadInfo = (uint8_t*) calloc(1, payloadSize);
+	header = (struct apm_module_param_data_t*)payloadInfo;
+	header->module_instance_id = payload->gsl_input_payload->miid;
+	header->error_code = 0x0;
+	header->param_id = PARAM_ID_SPR_SHARED_MEMORY_INFO;
+	header->param_size = payloadSize - sizeof(struct apm_module_param_data_t);
+
+	spf_payload = (struct param_id_spr_shared_memory_info_t *)(payloadInfo +
+            sizeof(struct apm_module_param_data_t));
+	spf_payload->shared_memory_addr_lsw = (uint32_t)payload->shmem_operating_info->spf_addr;
+	spf_payload->shared_memory_addr_msw = (uint32_t)payload->shmem_operating_info->spf_addr >> 32;
+	spf_payload->shared_memory_size = payload->gsl_input_payload->size;
+	spf_payload->shared_mem_map_handle = payload->shmem_operating_info->spf_mmap_handle;
+
+	rc = gsl_set_custom_config(graph_handle, payloadInfo, payloadSize);
+	free(payloadInfo);
+	payloadInfo = NULL;
+	return rc;
+}
+
+int32_t gsl_shmem_custom_dealloc(gsl_input_payload_t *gsl_input_payload){
+	int32_t rc = AR_EOK;
+	ar_list_node_t *itr = NULL;
+	shmem_link_node_t *curr_shmem_node = NULL;
+
+	ar_list_for_each_entry(itr, &gsl_shmem_list){
+		curr_shmem_node = get_container_base(itr, shmem_link_node_t, node);
+		if (curr_shmem_node->shmem->v_addr == gsl_input_payload->addr){
+			ar_list_delete(&gsl_shmem_list, &curr_shmem_node->node);
+			rc = gsl_shmem_free(curr_shmem_node->shmem);
+			free(curr_shmem_node);
+			if (rc)
+				GSL_ERR("Failed to deallocate shmem_node");
+			break;
+		}
+	}
+
+	return rc;
+}
+
 int32_t gsl_get_tagged_custom_config(gsl_handle_t graph_handle, uint32_t tag,
 	uint8_t *payload, uint32_t *size)
 {
@@ -1674,6 +1782,9 @@ int32_t gsl_ioctl(gsl_handle_t graph_handle,
 	uint32_t i;
 	struct gsl_cmd_graph_select *ag = NULL, *cg = NULL;
 	struct gsl_cmd_remove_graph *rg = NULL;
+	gsl_input_payload_t* gsl_input_payload = NULL;
+	gsl_operating_payload_t *gsl_operating_payload = NULL;
+	struct gsl_shmem_alloc_data *gsl_map_data = NULL;
 
 	if (!gsl_main_start_client_op(&gsl_ctxt)) {
 		rc = AR_ENOTREADY;
@@ -1907,6 +2018,40 @@ int32_t gsl_ioctl(gsl_handle_t graph_handle,
 			gsl_ctxt.open_close_lock);
 		if (rc)
 			GSL_ERR("close with properties ioctl failed %d", rc);
+		break;
+
+	case GSL_CMD_SHARED_MEM_CUSTOM_ALLOC_MAP:
+		if (cmd_payload_sz < sizeof(gsl_input_payload_t)) {
+			rc = AR_EBADPARAM;
+			break;
+		}
+		gsl_input_payload = (gsl_input_payload_t *)cmd_payload;
+		gsl_operating_payload = calloc(1, sizeof(gsl_operating_payload));
+		gsl_map_data = (struct gsl_shmem_alloc_data*)calloc(1, sizeof(struct gsl_shmem_alloc_data));
+
+		rc = gsl_shmem_custom_alloc(gsl_input_payload, gsl_map_data);
+		if (rc){
+			GSL_ERR("shared memory allocation failed %d", rc);
+			break;
+		}
+		gsl_input_payload->addr = gsl_map_data->v_addr;
+
+		gsl_operating_payload->gsl_input_payload = gsl_input_payload;
+		gsl_operating_payload->shmem_operating_info = gsl_map_data;
+		rc = gsl_setparam_to_spr(graph_handle, gsl_operating_payload);
+		if (rc)
+			GSL_ERR("set parameters failed %d", rc);
+		free(gsl_operating_payload);
+		free(gsl_map_data);
+		gsl_operating_payload = NULL;
+		gsl_map_data = NULL;
+		break;
+
+	case GSL_CMD_SHARED_MEM_CUSTOM_DEALLOC_MAP:
+		gsl_input_payload = (gsl_input_payload_t *)cmd_payload;
+		rc = gsl_shmem_custom_dealloc(gsl_input_payload);
+		if (rc)
+			GSL_ERR("shared memory deallocation failed %d", rc);
 		break;
 
 	case GSL_CMD_QUERY_GRAPH_DELAY:
