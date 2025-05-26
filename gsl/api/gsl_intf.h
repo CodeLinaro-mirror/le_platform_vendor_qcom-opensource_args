@@ -6,7 +6,7 @@
  * \brief
  *      Defines public APIs for Graph Service Layer (GSL)
  *
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #ifdef __cplusplus
@@ -191,6 +191,10 @@ enum gsl_cmd_id {
 	 * and property_values
 	 */
 	GSL_CMD_CLOSE_WITH_PROPS = 0x15,
+	/** Allocate shared memory for SPR module. */
+	GSL_CMD_SHARED_MEM_CUSTOM_ALLOC_MAP = 0x16,
+	/** Allocate shared memory for SPR module. */
+	GSL_CMD_SHARED_MEM_CUSTOM_DEALLOC_MAP = 0x17,
 	GSL_CMD_MAX
 };
 
@@ -1184,6 +1188,23 @@ int32_t gsl_get_supported_gkvs(uint32_t *key_ids,
  */
 int32_t gsl_get_graph_alias(const struct gsl_key_vector *graph_key_vect,
 	char *alias, uint32_t *alias_len);
+
+/**
+ * \brief Get the size of available buffer (in bytes) ready to be written (playback) / read
+ * (capture)
+ *
+ * For playback case, returns the size of empty buffer (in bytes) for GSL clients to write.
+ * For capture case, returns the size of buffer (in bytes) that GSL clients can queue to SPF
+ * for read.
+ *
+ * \param[in] graph_handle: graph handle
+ * \param[in] dir: indicates whether to return write or read available buffer size
+ * \param[out] bytes: buffer size (in bytes) ready to be written (playback) / read (capture)
+ *
+ * \return AR_EOK in success, error code otherwise.
+ */
+int32_t gsl_get_avail_buffer_size(gsl_handle_t graph_handle, enum gsl_data_dir dir,
+	uint32_t *bytes);
 
 #ifdef __cplusplus
 }  /* extern "C" */
