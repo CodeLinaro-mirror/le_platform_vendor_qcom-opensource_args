@@ -128,6 +128,12 @@ AC_ARG_WITH([ats_data_logging],
      [with_ats_data_logging=no])
 AM_CONDITIONAL([USES_ATS_DATA_LOGGING], [test "x${with_ats_data_logging}" = "xyes"])
 
+AC_ARG_WITH([openwrt],
+    AS_HELP_STRING([use openwrt (default is no)]),
+    [with_openwrt=$withval],
+    [with_openwrt=no])
+AM_CONDITIONAL([BUILDSYSTEM_OPENWRT], [test "x${with_openwrt}" = "xyes"])
+
 AC_CONFIG_FILES(
 Makefile
 spf/Makefile
