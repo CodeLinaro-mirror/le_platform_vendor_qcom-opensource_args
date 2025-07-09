@@ -20,6 +20,7 @@
 #include "gsl_intf.h"
 #include "gsl_common.h"
 #include "gsl_msg_builder.h"
+#include "hpcm_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -164,6 +165,8 @@ struct gsl_data_path_info {
 	uint32_t master_proc_id;
 
 	bool_t is_shmem_supported;
+
+        uint32_t module_id;
 };
 
 /**

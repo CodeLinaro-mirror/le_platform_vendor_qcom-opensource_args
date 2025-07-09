@@ -28,6 +28,7 @@
 #include "gsl_msg_builder.h"
 #include "gsl_spf_ss_state.h"
 #include "gsl_mdf_utils.h"
+#include "hpcm_api.h"
 
 #define GSL_GPR_DST_PORT_APM  (APM_MODULE_INSTANCE_ID)
 #define GSL_4KB_MULTIPLE_SIZE(x)  (((x) + 4095) & (~4095))
@@ -361,7 +362,12 @@ static uint32_t gsl_gpr_callback(gpr_packet_t *packet, void *cb_data)
 		ev.source_module_id = packet->src_port;
 		ev.event_payload = (void *)((int8_t *)module_ev +
 			sizeof(struct apm_module_event_t));
-		graph->cb(&ev, graph->client_data);
+		if (EVENT_ID_HPCM_HOST_BUF_DONE == module_ev->event_id){
+			GSL_DBG("EVENT_ID_HPCM_HOST_BUF_DONE event received \n");
+			gsl_handle_hpcm_buff_done(graph, packet, ev.event_payload);
+		} else {
+			graph->cb(&ev, graph->client_data);
+		}
 		gpr_rc = __gpr_cmd_free(packet);
 		break;
 	default:
@@ -3240,6 +3246,12 @@ static int32_t gsl_graph_open_sgids_and_connections(struct gsl_graph *graph,
 		GSL_MUTEX_LOCK(graph->get_set_cfg_lock);
 		rc = gsl_graph_set_sg_cal(graph, sgids, gkv_node, ckv, gkv, false);
 		GSL_MUTEX_UNLOCK(graph->get_set_cfg_lock);
+#ifdef MDSP_PROC
+		if (rc) {
+			GSL_DBG("Graph set cal failed : %d", rc);
+			rc = AR_EOK;
+		}
+#else
 		if (rc == AR_EUNSUPPORTED || rc == AR_ENOTEXIST) {
 			/*
 			 * we let open succeed since ENOTEXIST is benign and EUNSUPPORTED is
@@ -3263,6 +3275,7 @@ static int32_t gsl_graph_open_sgids_and_connections(struct gsl_graph *graph,
 			gsl_graph_close_sgids_and_connections(graph, *sgids,
 				sg_conn->subgraphs, sg_conn->num_sgs);
 		}
+#endif
 	}
 
 free_gsl_msg:
