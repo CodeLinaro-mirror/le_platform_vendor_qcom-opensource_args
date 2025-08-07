@@ -98,6 +98,7 @@ spf_sources = ./api/apm/apm_api.h \
                 ./api/modules/pop_suppressor_api.h \
                 ./api/modules/priority_sync_api.h \
                 ./api/modules/prm_api.h \
+                ./api/modules/sdz_api.h \
                 ./api/modules/rate_adapted_timer_api.h \
                 ./api/modules/rd_sh_mem_client_api.h \
                 ./api/modules/rd_sh_mem_ep_api.h \
@@ -140,6 +141,7 @@ asps_sources =  ./api/asps/asps_ads_usecase_api.h \
                 ./api/asps/asps_upd_usecase_api.h \
                 ./api/asps/asps_acd_usecase_api.h \
                 ./api/asps/asps_acm_api.h \
+                ./api/asps/asps_sdz_usecase_api.h \
                 ./api/asps/asps_us_rendering_usecase_api.h
 
 spf_includedir = $(includedir)/spf
