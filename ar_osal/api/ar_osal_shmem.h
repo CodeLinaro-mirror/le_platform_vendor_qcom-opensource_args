@@ -6,7 +6,7 @@
  * \brief
  *     Defines public APIs for shared memory allocation for DSP.
  * \copyright
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -45,6 +45,12 @@ typedef enum ar_shmem_buffer_index_type
 	AR_SHMEM_BUFFER_OFFSET = 1
 }ar_shmem_buffer_index_type_t;
 
+typedef enum ar_shmem_pd_type
+{
+	STATIC_PD = 1,
+	DYNAMIC_PD = 2
+} ar_shmem_pd_type_t;
+
 /**< Bits to indicate if hardware accelerator is enabled/disabled */
 #define AR_SHMEM_HW_ACCELERATOR_ENABLED 0x1
 #define AR_SHMEM_HW_ACCELERATOR_DISABLED 0x0
@@ -53,6 +59,12 @@ typedef enum ar_shmem_buffer_index_type
 #define AR_SHMEM_BIT_MASK_HW_ACCELERATOR_FLAG 0x1
 /**< Shift amount for hardware accelerator setup flag */
 #define AR_SHMEM_SHIFT_HW_ACCELERATOR_FLAG 0x0
+
+typedef struct ar_shmem_proc_info_t {
+	uint8_t proc_id;
+	ar_shmem_pd_type_t proc_type;
+	bool_t is_active;
+} ar_shmem_proc_info;
 
  /**
  * Shared memory info structure
@@ -79,7 +91,7 @@ typedef struct ar_shmem_info_t
 	uint64_t                         metadata;       /**< out opt, pointer address to metadata structure defined by each platform
 																   for ar_shmem_alloc()*/
 	uint8_t                          num_sys_id;     /**< in, number of subsystem IDs provided with ar_shmem_alloc()/ar_shmem_map() call.*/
-	uint8_t                         *sys_id;         /**< in, pointer to array of size num_sys_id for sub-system Ids provided
+	ar_shmem_proc_info               *sys_id;        /**< in, pointer to array of size num_sys_id for sub-system Ids provided
 														  in ar_osal_sys_id.h, used to allocate shared memory between the given
 														  list of sys_id provided with ar_shmem_alloc()/ar_shmem_map() call.*/
 	uint32_t                         platform_info;  /**< in opt, optional field for passing platform specific data to OSAL, this can be

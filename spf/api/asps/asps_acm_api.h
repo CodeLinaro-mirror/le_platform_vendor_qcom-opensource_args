@@ -5,7 +5,7 @@
  * \brief
  *    This file contains Audio-Sensor Proxy Service Commands Data Structures
  *
- *    Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *    Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *    SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -17,6 +17,8 @@
 #include "asps_acd_usecase_api.h"
 #include "asps_upd_usecase_api.h"
 #include "asps_ads_usecase_api.h"
+#include "asps_us_rendering_usecase_api.h"
+#include "asps_sdz_usecase_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,9 +75,11 @@ struct event_id_asps_sensor_register_request_t
         register.
 
         Supported usecase ids:
-          1. ASPS_USECASE_ID_ACD  
+          1. ASPS_USECASE_ID_ACD
           2. ASPS_USECASE_ID_UPD
-          3. ASPS_USECASE_ID_PCM_DATA      */
+          3. ASPS_USECASE_ID_PCM_DATA
+          4. ASPS_USECASE_ID_ULTRASOUND_RENDERING
+          5. ASPS_USECASE_ID_SDZ      */
 
    uint32_t payload_size;
    /**< Size of the "usecase_id" specific payload if any. */
@@ -131,7 +135,7 @@ struct param_id_asps_sensor_register_ack_t
         register.
 
         Supported usecase ids:
-          1. ASPS_USECASE_ID_ACD  
+          1. ASPS_USECASE_ID_ACD
           2. ASPS_USECASE_ID_UPD
           3. ASPS_USECASE_ID_PCM_DATA      */
 

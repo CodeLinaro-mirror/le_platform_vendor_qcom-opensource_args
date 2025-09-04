@@ -6,6 +6,7 @@ AM_CFLAGS = -I$(srcdir)/inc
 AM_CFLAGS += -I$(srcdir)/api
 AM_CFLAGS += -I$(srcdir)/rtc_api
 AM_CFLAGS += -I$(srcdir)/hw_rsc_api
+AM_CFLAGS += -I$(srcdir)/dls_client_api
 
 AM_CFLAGS += -I$(top_srcdir)/ar_osal/api
 AM_CFLAGS += -I$(top_srcdir)/ar_util/api
@@ -29,7 +30,9 @@ gsl_sources = ./inc/gsl_common.h \
               ./inc/gsl_subgraph_driver_props_generic.h \
               ./api/gsl_subgraph_driver_props.h \
               ./inc/gsl_mdf_utils.h \
-              ./inc/gsl_global_persist_cal.h
+              ./inc/gsl_global_persist_cal.h \
+              ./dls_client_api/gsl_dls_client_intf.h \
+              ./inc/gsl_dls_client.h
 
 gsl_c_sources = ./src/gsl_graph.c \
                 ./src/gsl_main.c \
@@ -45,15 +48,16 @@ gsl_c_sources = ./src/gsl_graph.c \
                 ./src/gsl_rtc_main.c \
                 ./src/gsl_hw_rsc_mgr.c \
                 ./src/gsl_msg_builder.c \
-                ./src/gsl_global_persist_cal.c
+                ./src/gsl_global_persist_cal.c \
+                ./src/gsl_dls_client.c
 
 lib_includedir = $(includedir)
 lib_include_HEADERS = $(gsl_sources)
 
-lib_LTLIBRARIES = libgsl.la
-libgsl_la_CC = @CC@
-libgsl_la_LIBADD = $(top_builddir)/acdb/libacdb.la $(top_builddir)/ar_osal/libar_osal.la $(top_builddir)/ar_util/libar_util.la $(top_builddir)/spf/libspfheaders.la $(top_builddir)/gpr/libgpr.la
-libgsl_la_SOURCES = $(gsl_c_sources)
-libgsl_la_CFLAGS = $(AM_CFLAGS)
-libgsl_la_LDFLAGS = -shared -avoid-version
+lib_LTLIBRARIES = libar-gsl.la
+libar_gsl_la_CC = @CC@
+libar_gsl_la_LIBADD = $(top_builddir)/acdb/libar-acdb.la $(top_builddir)/ar_osal/libar-osal.la $(top_builddir)/ar_util/libar-util.la $(top_builddir)/spf/libar-spfhdrs.la $(top_builddir)/gpr/libar-gpr.la
+libar_gsl_la_SOURCES = $(gsl_c_sources)
+libar_gsl_la_CFLAGS = $(AM_CFLAGS)
+libar_gsl_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@
 

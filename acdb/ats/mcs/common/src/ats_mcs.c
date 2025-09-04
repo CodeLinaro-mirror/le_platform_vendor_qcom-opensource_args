@@ -186,7 +186,7 @@ int32_t mcs_read_playback_2_req(mcs_play_2_t* req, uint8_t* cmd_buf, uint32_t cm
     {
         req->graph_key_vector.kvp =
             (mcs_key_value_pair_t*)(cmd_buf + offset);
-        offset += req->graph_key_vector.num_kvps 
+        offset += req->graph_key_vector.num_kvps
             * 2UL * (uint32_t)sizeof(uint32_t);
     }
 
@@ -197,7 +197,7 @@ int32_t mcs_read_playback_2_req(mcs_play_2_t* req, uint8_t* cmd_buf, uint32_t cm
     {
         req->cal_key_vector.kvp =
             (mcs_key_value_pair_t*)(cmd_buf + offset);
-        offset += req->cal_key_vector.num_kvps 
+        offset += req->cal_key_vector.num_kvps
             * 2UL * (uint32_t)sizeof(uint32_t);
     }
 
@@ -579,11 +579,11 @@ int32_t mcs_play_2(
 
     rsp.num_handles = 1;
     rsp.handles = (uint32_t*)(rsp_buf + sizeof(uint32_t));
-    
+
     ATS_INFO("Starting MCS record session");
 
     status = mcs_stream_cmd((uint32_t)MCS_CMD_PLAY_2,
-        (uint8_t*)&req, sizeof(mcs_play_2_t), 
+        (uint8_t*)&req, sizeof(mcs_play_2_t),
         (uint8_t*)&rsp, sizeof(mcs_session_handles_t), rsp_buf_bytes_filled);
 
     if (AR_FAILED(status))
@@ -628,7 +628,7 @@ int32_t mcs_rec_2(
 
     rsp.num_handles = 1;
     rsp.handles = (uint32_t*)(rsp_buf + sizeof(uint32_t));
-    
+
     ATS_INFO("Starting MCS record session");
 
     status = mcs_stream_cmd((uint32_t)MCS_CMD_REC_2,
@@ -703,7 +703,7 @@ int32_t mcs_multi_play_rec(
             }
 
             ar_mem_set(req.sessions[i].playback, 0, sizeof(mcs_play_2_t));
-            status = mcs_read_playback_2_req(req.sessions[i].playback, 
+            status = mcs_read_playback_2_req(req.sessions[i].playback,
                 cmd_buf, cmd_buf_size, &offset);
             if (AR_FAILED(status))
                 goto cleanup;
@@ -733,7 +733,7 @@ int32_t mcs_multi_play_rec(
             print_mcs_record_2(req.sessions[i].record);
         }
     }
-    
+
     rsp.num_sessions = req.num_sessions;
     rsp.handles = (mcs_multi_play_rec_handle_t*)(rsp_buf + sizeof(uint32_t));
 
@@ -768,7 +768,7 @@ end:
     else
     {
         *(uint32_t*)(rsp_buf) = rsp.num_sessions;
-        *rsp_buf_bytes_filled = sizeof(rsp.num_sessions) 
+        *rsp_buf_bytes_filled = sizeof(rsp.num_sessions)
             + rsp.num_sessions * sizeof(mcs_multi_play_rec_handle_t);
 
         if (rsp.handles != NULL)
@@ -807,7 +807,7 @@ int32_t mcs_stop_2(
 
     ATS_INFO("Stopping MCS media session(s)");
 
-    status = mcs_stream_cmd((uint32_t)MCS_CMD_STOP_2, (uint8_t*)&req, sizeof(mcs_session_handles_t), 
+    status = mcs_stream_cmd((uint32_t)MCS_CMD_STOP_2, (uint8_t*)&req, sizeof(mcs_session_handles_t),
         NULL, 0, NULL);
 
     if(AR_FAILED(status))

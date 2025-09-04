@@ -2,7 +2,7 @@
 #define __WSA_HAPTICS_VI_API_H__
 
 /*==============================================================================
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
 
   @file wsa_haptics_vi_api.h
@@ -44,7 +44,7 @@
     @h2xmlm_toolPolicy   {Calibration;CALIBRATION}
     @h2xmlm_description  {ID of the HAPTICS VI module.\n
       this module includes VI Sens feedback data processing,
-      Thermal tracking, LRA state tracking.
+     Thermal tracking, LRA state tracking.
 
       This module supports the following parameter IDs:\n
      - #PARAM_ID_HAPTICS_VI_STATIC_CONFIG\n
@@ -62,6 +62,17 @@
      - #PARAM_ID_HAPTICS_LRA_DIAG_GETPKT_PARAM\n
      - #PARAM_ID_HAPTICS_EX_VI_DEMO_PKT_PARAM\n
      - #PARAM_ID_HAPTICS_VI_CHANNEL_MAP_CFG\n
+     - #PARAM_ID_HAPTICS_VI_FTM_DATA_PARAM\n
+     - #PARAM_ID_HAPTICS_VI_CALIB_DATA_PARAM\n
+     - #PARAM_ID_HAPTICS_VI_CALIB_PARAM\n
+     - #PARAM_ID_HAPTICS_VI_CALIB_PARAM_V2\n
+     - #PARAM_ID_HAPTICS_VI_FTM_CFG\n
+     - #PARAM_ID_HAPTICS_VI_TUNING_DATA_0_PARAM\n
+     - #PARAM_ID_HAPTICS_VI_TUNING_DATA_1_PARAM\n
+     - #PARAM_ID_HAPTICS_VI_TUNING_DATA_2_PARAM\n
+     - #PARAM_ID_HAPTICS_VI_TUNING_DATA_3_PARAM\n
+     - #PARAM_ID_HAPTICS_VI_TUNING_DATA_4_PARAM\n
+     - #PARAM_ID_HAPTICS_LRA_SELECTION_PARAM\n
 
       All parameter IDs are device independent.\n
 
@@ -85,7 +96,7 @@
      @h2xmlm_supportedContTypes  {APM_CONTAINER_TYPE_GC}
      @h2xmlm_isOffloadable       {false}
      @h2xmlm_stackSize            {HAPTICS_VI_STACK_SIZE}
-    @h2xmlm_ctrlDynamicPortIntent  { "HAPTICS VI intent id for communicating Vsens and Isens data" = INTENT_ID_HAPTICS, maxPorts=
+    @h2xmlm_ctrlDynamicPortIntent  { "HAPTICS VI intent id for communicating Vsens and Isens data" = 0x0800136E, maxPorts=
 1 }
      @h2xmlm_ToolPolicy              {Calibration}
 
@@ -129,19 +140,19 @@
 
 #define MAX_SAMPLES_IN_PACKET 480
 
-/*typedef enum haptics_th_vi_cali_state_t
+/*typedef enum haptics_vi_calib_state_t
 {
-    HAPTICS_TH_VI_CALI_STATE_INCORRECT_OP_MODE = 0, // returned if "operation_mode" is not "Thermal Calibration"
-    HAPTICS_TH_VI_CALI_STATE_INACTIVE = 1, // init value
-    HAPTICS_TH_VI_CALI_STATE_WARMUP = 2, // wait state for warmup
-    HAPTICS_TH_VI_CALI_STATE_INPROGRESS = 3, // in calibration state
-    HAPTICS_TH_VI_CALI_STATE_SUCCESS = 4, // calibration successful
-    HAPTICS_TH_VI_CALI_STATE_FAILED = 5, // calibration failed
-    HAPTICS_TH_VI_CALI_STATE_WAIT_FOR_VI = 6, // wait state for vi threshold
-    HAPTICS_TH_VI_CALI_STATE_VI_WAIT_TIMED_OUT = 7, // calibration could not start due to vi signals below threshold
-    HAPTICS_TH_VI_CALI_STATE_LOW_VI = 8, // calibration failed due to vi signals below threshold
-    HAPTICS_TH_VI_CALI_STATE_MAX_VAL = 0xFFFFFFFF // // max 32-bit unsigned value. tells the compiler to use 32-bit data type
-} haptics_th_vi_cali_state_t;
+    HAPTICS_VI_CALIB_STATE_INCORRECT_OP_MODE = 0, // returned if "operation_mode" is not "Thermal Calibration"
+    HAPTICS_VI_CALIB_STATE_INACTIVE = 1, // init value
+    HAPTICS_VI_CALIB_STATE_WARMUP = 2, // wait state for warmup
+    HAPTICS_VI_CALIB_STATE_INPROGRESS = 3, // in calibration state
+    HAPTICS_VI_CALIB_STATE_SUCCESS = 4, // calibration successful
+    HAPTICS_VI_CALIB_STATE_FAILED = 5, // calibration failed
+    HAPTICS_VI_CALIB_STATE_WAIT_FOR_VI = 6, // wait state for vi threshold
+    HAPTICS_VI_CALIB_STATE_VI_WAIT_TIMED_OUT = 7, // calibration could not start due to vi signals below threshold
+    HAPTICS_VI_CALIB_STATE_LOW_VI = 8, // calibration failed due to vi signals below threshold
+    HAPTICS_VI_CALIB_STATE_MAX_VAL = 0xFFFFFFFF // // max 32-bit unsigned value. tells the compiler to use 32-bit data type
+} haptics_vi_calib_state_t;
 
 // FTM support
 typedef enum haptics_th_vi_ftm_state_t
@@ -215,7 +226,7 @@ struct param_id_haptics_vi_static_config_t {
         @h2xmle_default     {1} */
    uint32_t sampling_rate;
    /**< @h2xmle_description {Sampling rate of VI signal.}
-        @h2xmle_rangeList   {"48kHz"=48000}
+        @h2xmle_rangeList   {"8kHz"=8000;"16kHz"=16000;"48kHz"=48000}
         @h2xmle_default     {48000} */
    uint32_t fpilot_Hz;
    /**< @h2xmle_description {Pilot tone frequency, in Hz. Pilot tone frequency values MUST be the same for the RX/TH/EX modules}
@@ -226,11 +237,11 @@ struct param_id_haptics_vi_static_config_t {
    /**< @h2xmle_description {Pilot tone amplitude relative to 0 dbFS (for example, -37 dB from the full scale), in dB. Pilot tone amplitude values MUST be the same for the RX/TH/EX modules}
         @h2xmle_range       {-40..-30} dB
         @h2xmle_default     {-37} */
-    int32_t smoothing_time_const_q24;
-    /**< @h2xmle_description {Smoothing time constant for f0 tracking parameter update. Default = 0.1, Range: 0 to 1}
-         @h2xmle_range       {0..16777216}
+   int32_t smoothing_time_const_q24;
+    /**< @h2xmle_description {Smoothing time constant for f0 tracking parameter update. Default = 1.3, Range: 0 to 9.5}
+         @h2xmle_range       {0..159383553}
          @h2xmle_dataFormat  {Q24}
-         @h2xmle_default     {1677721} */
+         @h2xmle_default     {21810380} */
 }
 
 #include "spf_end_pragma.h"
@@ -253,7 +264,7 @@ struct param_id_haptics_vi_static_config_t {
 typedef struct param_id_haptics_vi_op_mode_param_t param_id_haptics_vi_op_mode_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_OP_MODE_PARAM",
-                          PARAM_ID_HAPTICS_VI_OP_MODE_PARAM}
+                    PARAM_ID_HAPTICS_VI_OP_MODE_PARAM}
     @h2xmlp_description {Parameter used to select the operation mode of WSA smart haptics VI processing.}
     @h2xmlp_toolPolicy  {NO_SUPPORT}*/
 
@@ -266,12 +277,6 @@ struct param_id_haptics_vi_op_mode_param_t {
         @h2xmle_rangeList   {"Normal Running mode"=0;
                              "Calibration mode"=1;
                              "Factory Test Mode"=2} */
-
-   uint32_t th_r0t0_selection_flag[HAPTICS_MAX_OUT_CHAN]; // this flag determines which set of R0, T0 values the algorithm will use
-                                                          // (0: use calibrated R0, T0 value, 1: use safe R0, T0 value)
-    /**< @h2xmle_description {Specifies which set of R0, T0 values the algorithm will use. This field is valid only in
-                              Normal mode (operation_mode = 0).}
-         @h2xmle_rangeList   {"Use calibrated R0, T0 value"=0;"Use safe R0, T0 value"=1} */
 }
 
 #include "spf_end_pragma.h"
@@ -296,7 +301,7 @@ typedef struct param_id_haptics_vi_ex_FTM_mode_param_t param_id_haptics_vi_ex_FT
 #include "spf_begin_pragma.h"
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_EX_FTM_MODE_PARAM",
-                          PARAM_ID_HAPTICS_VI_EX_FTM_MODE_PARAM}
+                    PARAM_ID_HAPTICS_VI_EX_FTM_MODE_PARAM}
     */
 
 struct param_id_haptics_vi_ex_FTM_mode_param_t {
@@ -326,7 +331,7 @@ struct param_id_haptics_vi_ex_FTM_mode_param_t {
 typedef struct param_id_haptics_th_vi_r0t0_set_param_t param_id_haptics_th_vi_r0t0_set_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_TH_VI_R0T0_SET_PARAM",
-                          PARAM_ID_HAPTICS_TH_VI_R0T0_SET_PARAM}
+                    PARAM_ID_HAPTICS_TH_VI_R0T0_SET_PARAM}
     @h2xmlp_description {Parameter used to configure static R0T0 parameters of thermal VI processing}
     @h2xmlp_toolPolicy  {NO_SUPPORT}*/
 
@@ -354,6 +359,211 @@ struct param_id_haptics_th_vi_r0t0_set_param_t {
 #include "spf_end_pack.h"
 ;
 
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+/* TBD:
+ * This param is associated with EVENT_ID_HAPTICS_VI_CALIBRATION
+ * If there is no need of GET and SET support for this param from HLOS
+ * Then, there is no need to allocate param ID for this structure.
+ * Just having structure definition is enough */
+#define PARAM_ID_HAPTICS_VI_CALIB_PARAM 0x08001ADD
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_calib_param_t param_id_haptics_vi_calib_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_CALIB_PARAM",
+                    PARAM_ID_HAPTICS_VI_CALIB_PARAM}
+    */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_calib_param_t {
+    uint32_t state; // Calibration/FTM state    
+    /**< @h2xmle_description {Calibration/FTM state}
+        @h2xmle_range       {0...8}
+        @h2xmle_default     {0} */
+    uint32_t operation_mode;        // Calibration or FTM
+    /**< @h2xmle_description {Operation mode in which parameters were estimated.}
+         @h2xmle_rangeList   {"Normal mode"=0;
+                              "Calibration mode"=1;
+                              "Factory Test Mode"=2} */
+    int32_t Re_ohm_q24[HAPTICS_MAX_OUT_CHAN];   // LRA resistance from Calibration/FTM
+    /**< @h2xmle_description {DC resistance of LRA coil estimated during calibration/FTM mode, in Ohms. Default = 8Ohm, Range: 2 to 128Ohms}
+         @h2xmle_range       {33554432..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {134217728} */
+    int32_t Fres_Hz_q20[HAPTICS_MAX_OUT_CHAN];  // Resonance frequency from Calibration/FTM
+    /**< @h2xmle_description {Resonance frequency of LRA estimated during calibration/FTM mode, in Hz. Default = 160Hz, Range = 50 to 400Hz}
+        @h2xmle_range       {52428800..419430400}
+        @h2xmle_dataFormat  {Q20}
+        @h2xmle_default     {167772160} */
+    int32_t Bl_q24[HAPTICS_MAX_OUT_CHAN]; // Force factor (Bl) from Calibration/FTM
+    /**< @h2xmle_description {Force factor (Bl product) estimated during calibration/FTM mode. Default = 1, Range: 0.01 to 128}
+         @h2xmle_range       {167772..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {16777216} */
+    int32_t Rms_KgSec_q24[HAPTICS_MAX_OUT_CHAN]; // Mechanical damping from Calibration/FTM
+    /**< @h2xmle_description {Mechanical damping of LRA, estimated during calibration/FTM mode, in kg/s. Default = 0.0945kg/s, Range = 0.0001 to 20kg/s}
+         @h2xmle_range       {16777..335544320}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {1585446} */
+    int32_t Blq_ftm_q24[HAPTICS_MAX_OUT_CHAN];      // Non-linearity estimate for Bl (normalized value) from FTM
+    /**< @h2xmle_description {Non-linearity estimate for Bl (normalized value) estimated during FTM mode. Default = 0, Range: 0 to 1}
+         @h2xmle_range       {0..16777216}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {0} */
+    int32_t Le_mH_ftm_q24[HAPTICS_MAX_OUT_CHAN];    // LRA inductance from FTM
+    /**< @h2xmle_description {Inductance of LRA coil at room temperature estimated during FTM mode, in mH. Default = 0.04mH, Range: 0.001mH to 128mH}
+         @h2xmle_range       {16777..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {671088} */
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+/* TBD:
+ * This param is associated with EVENT_ID_HAPTICS_VI_CALIBRATION
+ * If there is no need of GET and SET support for this param from HLOS
+ * Then, there is no need to allocate param ID for this structure.
+ * Just having structure definition is enough */
+#define PARAM_ID_HAPTICS_VI_CALIB_PARAM_V2 0x08001B24
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_calib_param_v2_t param_id_haptics_vi_calib_param_v2_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_CALIB_PARAM_V2",
+                    PARAM_ID_HAPTICS_VI_CALIB_PARAM_V2}
+    */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_calib_param_v2_t {
+    uint32_t state; // Calibration/FTM state    
+    /**< @h2xmle_description {Calibration/FTM state}
+        @h2xmle_range       {0...8}
+        @h2xmle_default     {0} */
+    uint32_t operation_mode;        // Calibration or FTM
+    /**< @h2xmle_description {Operation mode in which parameters were estimated.}
+         @h2xmle_rangeList   {"Normal mode"=0;
+                              "Calibration mode"=1;
+                              "Factory Test Mode"=2} */
+    int32_t Re_ohm_q24[HAPTICS_MAX_OUT_CHAN];   // LRA resistance from Calibration/FTM
+    /**< @h2xmle_description {DC resistance of LRA coil estimated during calibration/FTM mode, in Ohms. Default = 8Ohm, Range: 2 to 128Ohms}
+         @h2xmle_range       {33554432..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {134217728} */
+    int32_t Fres_Hz_q20[HAPTICS_MAX_OUT_CHAN];  // Resonance frequency from Calibration/FTM
+    /**< @h2xmle_description {Resonance frequency of LRA estimated during calibration/FTM mode, in Hz. Default = 160Hz, Range = 50 to 400Hz}
+        @h2xmle_range       {52428800..419430400}
+        @h2xmle_dataFormat  {Q20}
+        @h2xmle_default     {167772160} */
+    int32_t Bl_q24[HAPTICS_MAX_OUT_CHAN]; // Force factor (Bl) from Calibration/FTM
+    /**< @h2xmle_description {Force factor (Bl product) estimated during calibration/FTM mode. Default = 1, Range: 0.01 to 128}
+         @h2xmle_range       {167772..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {16777216} */
+    int32_t Rms_KgSec_q24[HAPTICS_MAX_OUT_CHAN]; // Mechanical damping from Calibration/FTM
+    /**< @h2xmle_description {Mechanical damping of LRA, estimated during calibration/FTM mode, in kg/s. Default = 0.0945kg/s, Range = 0.0001 to 20kg/s}
+         @h2xmle_range       {16777..335544320}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {1585446} */
+    int32_t Blq_ftm_q24[HAPTICS_MAX_OUT_CHAN];      // Non-linearity estimate for Bl (normalized value) from FTM
+    /**< @h2xmle_description {Non-linearity estimate for Bl (normalized value) estimated during FTM mode. Default = 0, Range: 0 to 1}
+         @h2xmle_range       {0..16777216}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {0} */
+    int32_t Le_mH_ftm_q24[HAPTICS_MAX_OUT_CHAN];    // LRA inductance from FTM
+    /**< @h2xmle_description {Inductance of LRA coil at room temperature estimated during FTM mode, in mH. Default = 0.04mH, Range: 0.001mH to 128mH}
+         @h2xmle_range       {16777..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {671088} */
+    int32_t Fres_offset_Hz_q20[HAPTICS_MAX_OUT_CHAN];      // F0 offset from duffing non linerity
+    /**< @h2xmle_description {F0 offset from duffing non linerity (in Hz). Default = 0, Range: 0 to 100}
+         @h2xmle_range       {0..0x64}
+         @h2xmle_dataFormat  {Q20}
+         @h2xmle_default     {0} */
+    int32_t Tuned_LRA_ID[HAPTICS_MAX_OUT_CHAN];    // ID of LRA selected during FTM
+    /**< @h2xmle_description {ID of LRA selected during FTM. Default = 0, Range: 0 to 4}
+         @h2xmle_range       {0..4}
+         @h2xmle_default     {0} */
+    uint32_t payload_size; // Custom payload size in bytes, returned from FTM.
+    /**< @h2xmle_description {Custom payload size in bytes, returned from FTM.}
+        @h2xmle_range       {0...10240}
+        @h2xmle_default     {0} */
+#ifdef __H2XML__
+    uint8_t payload_data[0];
+    /**< @h2xmle_description      {Custom payload data, returned from FTM.}
+         @h2xmle_variableArraySize {payload_size} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+  ==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_FTM_CFG 0x08001B1D
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_ftm_cfg_t param_id_haptics_vi_ftm_cfg_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_FTM_CFG",
+                         PARAM_ID_HAPTICS_VI_FTM_CFG}
+    @h2xmlp_description {Parameter to set FTM configuration}
+    @h2xmlp_toolPolicy  {CALIBRATION} */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_haptics_vi_ftm_cfg_t {
+    uint32_t non_linearity_compensation;        // Enable/Disable duffing non linearity compensation
+    /**< @h2xmle_description {Enable/Disable duffing non linearity compensation}
+         @h2xmle_rangeList   {"Disabled"=0;
+                               "Enabled"=1}*/
+    int32_t ftm_amplitude_q24[HAPTICS_MAX_OUT_CHAN];     // FTM playback amplitude level in Volts
+    /**< @h2xmle_description {FTM playback amplitude level in Volts}
+         @h2xmle_range       {0..0x7FFFFFFF}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {16777216} */
+    int32_t f0_tracking_duration_ms[HAPTICS_MAX_OUT_CHAN];     // f0 tracking duration in ms
+    /**< @h2xmle_description {FTM f0 tracking duration in ms}
+         @h2xmle_range       {0..1000}
+         @h2xmle_default     {250} */
+    int32_t f0_duffing_duration_ms[HAPTICS_MAX_OUT_CHAN];     // FTM f0 tracking non linearity compensation max duration in ms
+    /**< @h2xmle_description {FTM f0 tracking non linearity compensation max duration in ms}
+         @h2xmle_range       {0..8000}
+         @h2xmle_default     {6000} */
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
 
 /*==============================================================================
    Constants
@@ -370,7 +580,7 @@ struct param_id_haptics_th_vi_r0t0_set_param_t {
 typedef struct param_id_haptics_th_vi_r0_get_param_t param_id_haptics_th_vi_r0_get_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_TH_VI_R0_GET_PARAM",
-                          PARAM_ID_HAPTICS_TH_VI_R0_GET_PARAM}
+                    PARAM_ID_HAPTICS_TH_VI_R0_GET_PARAM}
     */
 
 #include "spf_begin_pack.h"
@@ -516,7 +726,7 @@ struct wsa_haptics_r0t0_cali_param_t
 typedef struct param_id_haptics_th_vi_dynamic_param_t param_id_haptics_th_vi_dynamic_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_TH_VI_DYNAMIC_PARAM",
-                          PARAM_ID_HAPTICS_TH_VI_DYNAMIC_PARAM}
+                    PARAM_ID_HAPTICS_TH_VI_DYNAMIC_PARAM}
     @h2xmlp_description {Parameter used to configure dynamic thermal parameters for WSA smart haptics VI processing.}
     @h2xmlp_toolPolicy  {CALIBRATION;RTC_READONLY}*/
 
@@ -567,7 +777,7 @@ struct param_id_haptics_th_vi_dynamic_param_t {
 typedef struct param_id_haptics_th_vi_ftm_set_cfg param_id_haptics_th_vi_ftm_set_cfg;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_TH_VI_FTM_SET_CFG",
-                         PARAM_ID_HAPTICS_TH_VI_FTM_SET_CFG}
+                   PARAM_ID_HAPTICS_TH_VI_FTM_SET_CFG}
     @h2xmlp_description {Parameter used to set the FTM configuration in the WSA smart haptics thermal VI processing module.}
     @h2xmlp_toolPolicy  {CALIBRATION;RTC_READONLY}*/
 
@@ -608,7 +818,7 @@ struct param_id_haptics_th_vi_ftm_set_cfg {
 typedef struct param_id_haptics_th_vi_ftm_get_param_t param_id_haptics_th_vi_ftm_get_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_TH_VI_FTM_GET_PARAM",
-                          PARAM_ID_HAPTICS_TH_VI_FTM_GET_PARAM}
+                    PARAM_ID_HAPTICS_TH_VI_FTM_GET_PARAM}
     @h2xmlp_description {Thermal VI FTM mode parameters returned from WSA Smart haptics thermal FTM mode}
     @h2xmlp_toolPolicy  {RTC_READONLY}*/
 
@@ -657,7 +867,7 @@ typedef struct wsa_haptics_ex_lra_param_t wsa_haptics_ex_lra_param_t;
 
 struct wsa_haptics_ex_lra_param_t
 {
-    int32_t Re_ohm_q24;
+   int32_t Re_ohm_q24;
     /**< @h2xmle_description {DC resistance of LRA coil at room temperature, in Ohms. Default = 8Ohm, Range: 2 to 128Ohms}
          @h2xmle_range       {33554432..2147483647}
          @h2xmle_dataFormat  {Q24}
@@ -757,7 +967,7 @@ struct wsa_haptics_ex_lra_param_t
 typedef struct param_id_haptics_ex_vi_dynamic_param_t param_id_haptics_ex_vi_dynamic_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_EX_VI_DYNAMIC_PARAM",
-                          PARAM_ID_HAPTICS_EX_VI_DYNAMIC_PARAM}
+                    PARAM_ID_HAPTICS_EX_VI_DYNAMIC_PARAM}
     @h2xmlp_description {Parameter used to configure the dynamic parameters of excursion VI processing.}
     @h2xmlp_toolPolicy  {CALIBRATION;RTC_READONLY}*/
 
@@ -794,7 +1004,7 @@ struct param_id_haptics_ex_vi_dynamic_param_t {
 typedef struct param_id_haptics_ex_vi_persistent param_id_haptics_ex_vi_persistent;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_EX_VI_PERSISTENT",
-                          PARAM_ID_HAPTICS_EX_VI_PERSISTENT}
+                    PARAM_ID_HAPTICS_EX_VI_PERSISTENT}
     @h2xmlp_description {Excursion VI persistent parameters}
     @h2xmlp_toolPolicy  {RTC_READONLY}*/
 
@@ -853,7 +1063,7 @@ struct param_id_haptics_ex_vi_persistent {
 typedef struct param_id_haptics_ex_vi_ftm_set_cfg param_id_haptics_ex_vi_ftm_set_cfg;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_EX_VI_FTM_SET_CFG",
-                          PARAM_ID_HAPTICS_EX_VI_FTM_SET_CFG}
+                    PARAM_ID_HAPTICS_EX_VI_FTM_SET_CFG}
     @h2xmlp_description {Excursion VI FTM mode parameters}
     @h2xmlp_toolPolicy  {CALIBRATION;RTC_READONLY}*/
 
@@ -938,7 +1148,7 @@ struct wsa_ex_vi_ftm_get_param_t {
 typedef struct param_id_haptics_ex_vi_ftm_get param_id_haptics_ex_vi_ftm_get;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_EX_VI_FTM_GET",
-                          PARAM_ID_HAPTICS_EX_VI_FTM_GET}
+                    PARAM_ID_HAPTICS_EX_VI_FTM_GET}
     @h2xmlp_description {Excursion VI FTM mode parameters returned from WSA Smart haptics excursion FTM mode}
     @h2xmlp_toolPolicy  {RTC_READONLY}*/
 
@@ -976,7 +1186,7 @@ struct param_id_haptics_ex_vi_ftm_get {
 typedef struct param_id_haptics_lra_diag_getpkt_param_t param_id_haptics_lra_diag_getpkt_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_LRA_DIAG_GETPKT_PARAM",
-                          PARAM_ID_HAPTICS_LRA_DIAG_GETPKT_PARAM}
+                    PARAM_ID_HAPTICS_LRA_DIAG_GETPKT_PARAM}
     @h2xmlp_description {Parameter used to get general LRA diagnostics like whether LRA is open, or close or if DC is flowing through it.}
     @h2xmlp_toolPolicy  {RTC_READONLY}*/
 // General LRA Diagnostics
@@ -1020,7 +1230,7 @@ struct param_id_haptics_lra_diag_getpkt_param_t {
 typedef struct param_id_haptics_ex_vi_demo_pkt_param_t param_id_haptics_ex_vi_demo_pkt_param_t;
 
 /** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_EX_VI_DEMO_PKT_PARAM",
-                          PARAM_ID_HAPTICS_EX_VI_DEMO_PKT_PARAM}
+                    PARAM_ID_HAPTICS_EX_VI_DEMO_PKT_PARAM}
     @h2xmlp_description {Parameter used to get general LRA diagnostics like whether LRA is open, or close or if DC is flowing through it.}
     @h2xmlp_toolPolicy  {RTC_READONLY}*/
 // General LRA Diagnostics
@@ -1038,6 +1248,102 @@ struct param_id_haptics_ex_vi_demo_pkt_param_t
     int32_t xpred_from_vsens[0][MAX_SAMPLES_IN_PACKET];
     /**< @h2xmle_description        {structure containing LRA params for excursion prediction }
          @h2xmle_variableArraySize  {num_channels} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_FTM_DATA_PARAM 0x08001ADC
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_ftm_data_param_t param_id_haptics_vi_ftm_data_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_FTM_DATA_PARAM", PARAM_ID_HAPTICS_VI_FTM_DATA_PARAM}
+    @h2xmlp_description {Parameter for registering haptics ftm data to lib.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_ftm_data_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for FTM data file}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of ftm data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the FTM data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00000064} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics FTM data: The path to the FTM cal file}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_CALIB_DATA_PARAM 0x08001ADB
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_calib_data_param_t param_id_haptics_vi_calib_data_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_CALIB_DATA_PARAM", PARAM_ID_HAPTICS_VI_CALIB_DATA_PARAM}
+    @h2xmlp_description {Parameter for registering haptics calibration data to lib.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_calib_data_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for Calibration data file}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of calibration data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the calibration data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00000064} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics calibration data: The path to the calibration cal file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
 #endif
 }
 
@@ -1093,6 +1399,312 @@ struct param_id_haptics_vi_channel_map_cfg_t
 #include "spf_end_pack.h"
 ;
 
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_TUNING_DATA_0_PARAM 0x08001B1E
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_tuning_data_0_param_t param_id_haptics_vi_tuning_data_0_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_TUNING_DATA_0_PARAM", PARAM_ID_HAPTICS_VI_TUNING_DATA_0_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 0 to VI module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_tuning_data_0_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for VI module tuning data file for LRA 0}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of VI module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the VI module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {VI module tuning data for LRA 0: path to the VI module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_TUNING_DATA_1_PARAM 0x08001B1F
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_tuning_data_1_param_t param_id_haptics_vi_tuning_data_1_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_TUNING_DATA_1_PARAM", PARAM_ID_HAPTICS_VI_TUNING_DATA_1_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 1 to VI module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_tuning_data_1_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for VI module tuning data file for LRA 1}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of VI module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the VI module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {VI module tuning data for LRA 1: path to the VI module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_TUNING_DATA_2_PARAM 0x08001B20
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_tuning_data_2_param_t param_id_haptics_vi_tuning_data_2_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_TUNING_DATA_2_PARAM", PARAM_ID_HAPTICS_VI_TUNING_DATA_2_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 2 to VI module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_tuning_data_2_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for VI module tuning data file for LRA 2}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of VI module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the VI module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {VI module tuning data for LRA 2: path to the VI module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_TUNING_DATA_3_PARAM 0x08001B21
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_tuning_data_3_param_t param_id_haptics_vi_tuning_data_3_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_TUNING_DATA_3_PARAM", PARAM_ID_HAPTICS_VI_TUNING_DATA_3_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 3 to VI module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_tuning_data_3_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for VI module tuning data file for LRA 3}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of VI module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the VI module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {VI module tuning data for LRA 3: path to the VI module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_VI_TUNING_DATA_4_PARAM 0x08001B22
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_vi_tuning_data_4_param_t param_id_haptics_vi_tuning_data_4_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_VI_TUNING_DATA_4_PARAM", PARAM_ID_HAPTICS_VI_TUNING_DATA_4_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 4 to VI module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_vi_tuning_data_4_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for VI module tuning data file for LRA 4}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of VI module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the VI module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {VI module tuning data for LRA 4: path to the VI module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_LRA_SELECTION_PARAM 0x08001B23
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+// Structure encapsulating min and max range for LRAs from multiple sources
+typedef struct haptics_lra_selection_range_param_t haptics_lra_selection_range_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+
+struct haptics_lra_selection_range_param_t
+{
+   int32_t min_value;
+   /**< @h2xmle_description {Min valid selection parameter value for selected source (including min_value)}
+        @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {0} */
+   int32_t max_value;
+   /**< @h2xmle_description {Max valid selection parameter value for selected source (excluding max_value)}
+        @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2147483647} */
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_lra_selection_param_t param_id_haptics_lra_selection_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_LRA_SELECTION_PARAM",
+                    PARAM_ID_HAPTICS_LRA_SELECTION_PARAM}
+    @h2xmlp_description {Parameter defining differentiation criteria for LRAs from multiple sources.}
+    @h2xmlp_toolPolicy  {CALIBRATION}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_lra_selection_param_t {
+   uint32_t num_lra_sources;
+   /**< @h2xmle_description {Number of LRA sources}
+        @h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5}
+        @h2xmle_default     {1} */
+   uint32_t lra_selection_criteria;
+   /**< @h2xmle_description {Parameter used to differentiate the LRAs from different sources}
+        @h2xmle_rangeList   {"LRA DC Resisistance"=0;"LRA Coil Inductance"=1}
+        @h2xmle_default     {0} */
+#ifdef __H2XML__
+   haptics_lra_selection_range_param_t lra_selection_range[0];
+   /**< @h2xmle_description       {Selection parameter range for selected source}
+        @h2xmle_variableArraySize {num_lra_sources} */   
+#endif
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
 #define EVENT_ID_HAPTICS_VI_CALIBRATION 0x080013B4
 /*==============================================================================
    Type definitions
@@ -1111,7 +1723,7 @@ struct param_id_haptics_vi_channel_map_cfg_t
 /** @h2xmlp_parameter   {"EVENT_ID_HAPTICS_LRA_DIAGNOSTICS",
                           EVENT_ID_HAPTICS_LRA_DIAGNOSTICS}
     @h2xmlp_description { if change in lra diagnostics state and temperature status,
-                          event will be raised by the Haptics Protection Module.}
+                    event will be raised by the Haptics Protection Module.}
     @h2xmlp_toolPolicy  { NO_SUPPORT}*/
 
 

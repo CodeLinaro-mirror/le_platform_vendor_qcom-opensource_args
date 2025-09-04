@@ -1,10 +1,10 @@
-#ifndef _TCPIP_CMD_SERVER_API_H_
-#define _TCPIP_CMD_SERVER_API_H_
+#ifndef _TCPIP_SERVER_API_H_
+#define _TCPIP_SERVER_API_H_
 /**
 *=============================================================================
-* \file tcpip_cmd_server.h
+* \file tcpip_server_api.h
 * \brief
-*              A T S  T C P I P  C M D  S E R V E R  
+*                 T C P I P  S E R V E R  A P I
 *                      H E A D E R  F I L E
 *
 *   This file contains the TCP/IP server API definitions used to host
@@ -77,23 +77,22 @@ int32_t tcpip_cmd_server_init(void(*ats_cb)(uint8_t *buf, uint32_t buf_len, uint
 */
 int32_t tcpip_cmd_server_deinit(void);
 
-#ifdef FEATURE_ATS_PUSH
+
 /**
 	\brief
-		Method to send payload data rettreived from ats service
+		Sends log buffers from the ATS DLS service to ATS Tcpip clients that are connected to the DLS server
 
 	\detdesc
-		Method will send on the port configured for  RTM, therefore uses the server socket object created
-		by the Socket server for RTM.
+		Log packet data is sent on a port separate from the command/response packets.
 
 	\dependencies
-		There must be a socket already accepted
+		DLS support must be enabled in the build to successfully forward log data to clients
 
-	\param [in] sendbuf: payload retreived from RTM Client
-	  payload_size: Size of the payload
+	\param [in] buffer: logging buffer populated by ats dls service layer
+	\param [in] buffer_size: size of the log data buffer in bytes
 */
-int32_t tcpip_cmd_server_send_rtm_log_data(const uint8_t* sendbuf, uint32_t payload_size);
-#endif /*FEATURE_ATS_PUSH*/
+int32_t tcpip_cmd_server_send_dls_log_data(const uint8_t* buffer, uint32_t buffer_size);
+
 
 #endif /*ATS_TRANSPORT_TCPIP*/
 
@@ -101,5 +100,5 @@ int32_t tcpip_cmd_server_send_rtm_log_data(const uint8_t* sendbuf, uint32_t payl
 }
 #endif /*__cplusplus*/
 
-#endif /*_TCPIP_CMD_SERVER_API_H_*/
+#endif /*_TCPIP_SERVER_API_H_*/
 

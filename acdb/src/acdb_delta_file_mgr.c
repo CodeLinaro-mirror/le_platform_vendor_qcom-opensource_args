@@ -391,6 +391,7 @@ int32_t AcdbDeltaDataCmdSave(void)
 end:
     AcdbListClear(p_map_list);
     p_map_list = NULL;
+    ar_fclose(*fhandle);
 
 	return status;
 }

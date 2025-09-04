@@ -11,17 +11,16 @@
 *    new connections, the server creates new receiving threads that handles
 *    all ATS upcalls.
 *
-*  \cond
+*  \copyright
 *      Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *      SPDX-License-Identifier: BSD-3-Clause-Clear
-*  \endcond
 *=============================================================================
 */
 #ifdef ATS_TRANSPORT_TCPIP
 #include <thread>
 #include <chrono>
 #include "tcpip_socket_util.h"
-#include "tcpip_rtm_server.h"
+#include "tcpip_dls_server.h"
 #include "tcpip_server_api.h"
 #include "tcpip_cmd_server.h"
 #include "ar_osal_log.h"
@@ -138,7 +137,7 @@ int32_t tcpip_cmd_server_init(void(*ats_exec_callback)(uint8_t* req, uint32_t re
     status = server.start(ats_exec_callback);
     if (AR_FAILED(status))
     {
-        TCPIP_CMD_SVR_ERR("Error[%d]: Failed to initialize ATS TCP/IP Server", 
+        TCPIP_CMD_SVR_ERR("Error[%d]: Failed to initialize ATS TCP/IP Server",
             status);
     }
     return status;
@@ -150,19 +149,17 @@ int32_t tcpip_cmd_server_deinit()
     status = server.stop();
     if (AR_FAILED(status))
     {
-        TCPIP_CMD_SVR_ERR("Error[%d]: Failed to deinitialize ATS Tcpip Server", 
+        TCPIP_CMD_SVR_ERR("Error[%d]: Failed to deinitialize ATS Tcpip Server",
             status);
     }
     return status;
 }
 
-#ifdef FEATURE_ATS_PUSH
-int32_t tcpip_cmd_server_send_rtm_log_data(const uint8_t * sendbuf, uint32_t payload_size)
+int32_t tcpip_cmd_server_send_dls_log_data(const uint8_t * sendbuf, uint32_t payload_size)
 {
-    return server.send_rtm_log_data(sendbuf, payload_size);
+    return server.send_dls_log_buffers(sendbuf, payload_size);
 }
-#endif
-/* 
+/*
 ============================================================================
                         TCPIP Server Implementation
 ============================================================================
@@ -200,12 +197,11 @@ int32_t TcpipServer::stop()
     return status;
 }
 
-#ifdef FEATURE_ATS_PUSH
-int32_t TcpipServer::send_rtm_log_data(const uint8_t* buffer, uint32_t buffer_size)
+int32_t TcpipServer::send_dls_log_buffers(const uint8_t* buffer, uint32_t buffer_size)
 {
-    return cmd_server.send_rtm_log_data((const char_t*)buffer, buffer_size);
+    return cmd_server.send_dls_log_buffers((const char_t*)buffer, buffer_size);
 }
-#endif
+
 /*
 ============================================================================
                     TCPIP CMD/RSP Server Implementation
@@ -223,11 +219,6 @@ int32_t TcpipCmdServer::start(void *args)
 
     this->address = TCPIP_CMD_SERVER_ADDRESS;
     this->port = TCPIP_CMD_SERVER_PORT;
-
-#if defined(FEATURE_ATS_PUSH)
-    _rtm_server.address = TCPIP_CMD_SERVER_ADDRESS;
-    _rtm_server.port = TCPIP_RTM_SERVER_PORT;
-#endif
 
     status = ar_osal_mutex_create(&connection_lock);
     if (AR_FAILED(status))
@@ -259,14 +250,12 @@ int32_t TcpipCmdServer::start(void *args)
 int32_t TcpipCmdServer::stop()
 {
     int32_t status = AR_EOK;
-    
+
     TCPIP_CMD_SVR_INFO("Closing ATS CMD/RSP Server ...");
     is_aborted = true;
     should_close_server = true;
 
-#if defined(FEATURE_ATS_PUSH)
-    status = _rtm_server.stop();
-#endif 
+    stop_dls_server();
 
     ar_socket_close(listen_socket);
     ar_socket_close(accept_socket);
@@ -287,12 +276,18 @@ int32_t TcpipCmdServer::stop()
     return status;
 }
 
-#ifdef FEATURE_ATS_PUSH
-int32_t TcpipCmdServer::send_rtm_log_data(const char_t* buffer, uint32_t buffer_size)
+
+int32_t TcpipCmdServer::send_dls_log_buffers(const char_t* buffer, uint32_t buffer_size)
 {
-    return _rtm_server.send_rtm_data(buffer, buffer_size);
-}
+#ifdef ATS_DATA_LOGGING
+    return _dls_server.send_dls_log_buffers(buffer, buffer_size);
+#else
+    __UNREFERENCED_PARAM(buffer);
+    __UNREFERENCED_PARAM(buffer_size);
+    return AR_EUNSUPPORTED;
 #endif
+}
+
 
 int32_t TcpipCmdServer::set_connected_lock(uint8_t value)
 {
@@ -333,18 +328,9 @@ void *TcpipCmdServer::connect_routine(void *args)
 
     TCPIP_CMD_SVR_INFO("Starting TCP/IP server thread.");
     int32_t status = AR_EOK;
-    char_t* str_addr = (char_t*)address.c_str();
-    //ar_socket_t listen_socket;
     ar_osal_thread_t thd_transmit = NULL;
-    struct ar_heap_info_t heap_inf =
-    {
-        AR_HEAP_ALIGN_DEFAULT,
-        AR_HEAP_POOL_DEFAULT,
-        AR_HEAP_ID_DEFAULT,
-        AR_HEAP_TAG_DEFAULT
-    };
 
-    status = tcpip_socket_util_create_socket(AR_SOCKET_ADDRESS_FAMILY, str_addr, port, &listen_socket);
+    status = tcpip_socket_util_create_socket(TCPIP_SERVER_TYPE_CMD, AR_SOCKET_ADDRESS_FAMILY, address, port, &listen_socket);
     if (AR_FAILED(status))
     {
         TCPIP_CMD_SVR_ERR("Error[%d]: Failed to create and bind to socket", status);
@@ -373,22 +359,14 @@ void *TcpipCmdServer::connect_routine(void *args)
         if (AR_FAILED(status))
         {
             ar_socket_close(accept_socket);
-            //ar_heap_free(accept_socket, &heap_inf);
 
             if (AR_SOCKET_LAST_ERROR == EINTR) continue;
 
             continue;
         }
 
-#if defined(FEATURE_ATS_PUSH)
-        //Start RTM Server only after connecting to Command Server
-        _rtm_server.stop();
-        status = _rtm_server.start();
-        if (AR_FAILED(status))
-        {
-            TCPIP_CMD_SVR_ERR("Error[%d]: Unable to start the RTM Server. Skipping...");
-        }
-#endif
+        //Start dls Server only after connecting to command server
+        start_dls_server();
 
         TCPIP_CMD_SVR_INFO("Client connected to ATS TCPIP Command-Response Server");
         ar_osal_mutex_unlock(connection_lock);
@@ -413,8 +391,8 @@ void *TcpipCmdServer::connect_routine(void *args)
         }
 
 
-        /* Only one client is allowed to connect to the server for now. 
-         * Block until client calls QUIT on transmission thread. 
+        /* Only one client is allowed to connect to the server for now.
+         * Block until client calls QUIT on transmission thread.
          * Allow 200 msec sleep for thd_transmit to aquire connection_lock*/
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         ar_osal_mutex_lock(connection_lock);
@@ -428,7 +406,7 @@ void *TcpipCmdServer::connect_routine(void *args)
 
     ar_socket_close(listen_socket);
     ar_socket_close(accept_socket);
-    //for (int j = 0; j < MAX_TCPIP_CLIENTS_ALLOWED; j++) 
+    //for (int j = 0; j < MAX_TCPIP_CLIENTS_ALLOWED; j++)
     //{
     //    status = ar_osal_thread_join_destroy(thd_transmit);
     //    if (AR_FAILED(status))
@@ -438,6 +416,30 @@ void *TcpipCmdServer::connect_routine(void *args)
     //}
 
     return 0;
+}
+
+void TcpipCmdServer::start_dls_server()
+{
+#ifdef ATS_DATA_LOGGING
+
+    _dls_server.address = TCPIP_CMD_SERVER_ADDRESS;
+    // _dls_server.port = TCPIP_DLS_SERVER_PORT;
+    _dls_server.stop();
+    if (AR_FAILED(_dls_server.start()))
+    {
+        TCPIP_CMD_SVR_ERR("Error[%d]: Unable to start the tcpip dls server. Skipping...");
+    }
+
+#endif
+}
+
+void TcpipCmdServer::stop_dls_server()
+{
+#ifdef ATS_DATA_LOGGING
+
+    _dls_server.stop();
+
+#endif
 }
 
 void *TcpipCmdServer::transmit_routine(void *args)
@@ -462,9 +464,9 @@ void *TcpipCmdServer::transmit_routine(void *args)
     recieve_buffer.buffer_size = TCPIP_CMD_SERVER_RECV_BUFFER_SIZE;
     //Stores one message
     message_buffer.buffer = (char_t*)ar_heap_malloc(message_buffer.buffer_size, &heap_inf);
-    if (NULL == message_buffer.buffer) 
+    if (NULL == message_buffer.buffer)
         return 0;
-    
+
     recieve_buffer.buffer = (char_t*)ar_heap_malloc(recieve_buffer.buffer_size, &heap_inf);
     if (NULL == recieve_buffer.buffer) {
         ar_heap_free(message_buffer.buffer, &heap_inf);
@@ -485,13 +487,13 @@ void *TcpipCmdServer::transmit_routine(void *args)
         uint32_t response_message_length = 0;
 
         /* This is for readability when analyzing the logs.We want to separate each command
-         * sent by the client with a new line to understand all the operations that occur 
+         * sent by the client with a new line to understand all the operations that occur
          * during one command */
         TCPIP_CMD_SVR_DBG("\n");
 
         status = recv_message_header(
             message_buffer.buffer, message_buffer.buffer_size,
-            recieve_buffer.buffer, recieve_buffer.buffer_size, 
+            recieve_buffer.buffer, recieve_buffer.buffer_size,
             request_message_length);
         if (AR_FAILED(status))
         {
@@ -501,7 +503,7 @@ void *TcpipCmdServer::transmit_routine(void *args)
             }
             else
             {
-                TCPIP_CMD_SVR_ERR("Error[%d]: Failed to read message header", 
+                TCPIP_CMD_SVR_ERR("Error[%d]: Failed to read message header",
                     status);
             }
             break;
@@ -518,7 +520,7 @@ void *TcpipCmdServer::transmit_routine(void *args)
         }
 
         status = process_message(
-            message_buffer.buffer, message_buffer.buffer_size, request_message_length, 
+            message_buffer.buffer, message_buffer.buffer_size, request_message_length,
             (char_t**)&outbuf,
             maxsize, response_message_length);
         if (AR_FAILED(status))
@@ -583,7 +585,7 @@ int32_t TcpipCmdServer::recv_message_header(char_t *msgBuf, uint32_t msgbuflen,
 
         TCPIP_CMD_SVR_DBG("Recieved %d bytes", bytes_recieved);
 
-        /* The client sends "QUIT" to signal end of connection. The server will close 
+        /* The client sends "QUIT" to signal end of connection. The server will close
          * the socket and return */
         if (ar_strcmp(recvbuf, ATS_SERVER_CMD_QUIT.c_str(), 4) == 0)
         {
@@ -642,8 +644,8 @@ int32_t TcpipCmdServer::recv_message(char_t *msgBuf, uint32_t msgbuflen,
     data_length -= ATS_HEADER_LENGTH;
     while (data_length > 0)
     {
-        //receive rest of message			
-        if (message_bytes_read > data_length) 
+        //receive rest of message
+        if (message_bytes_read > data_length)
         {
             TCPIP_CMD_SVR_ERR("Error[%d]: Read more than message length. Exiting..",
                 AR_ENEEDMORE);
@@ -659,7 +661,7 @@ int32_t TcpipCmdServer::recv_message(char_t *msgBuf, uint32_t msgbuflen,
         //will receive min(TCPIP_CMD_SERVER_RECV_BUFFER_SIZE, bytes left to receive to complete message)
         bytes_recieved = recv(accept_socket, recvbuf, recv_len, 0);
 
-        if (bytes_recieved > 0) 
+        if (bytes_recieved > 0)
         {
             TCPIP_CMD_SVR_DBG("Recieved %d bytes", bytes_recieved);
 
@@ -676,14 +678,14 @@ int32_t TcpipCmdServer::recv_message(char_t *msgBuf, uint32_t msgbuflen,
                 ar_mem_cpy(msgBuf + ATS_HEADER_LENGTH + message_bytes_read, bytes_recieved,
                     recvbuf, bytes_recieved);
             }
-            
+
             message_bytes_read += bytes_recieved;
             if (message_bytes_read == data_length)
             {
                 break;
             }
         }
-        else if (bytes_recieved <= 0) 
+        else if (bytes_recieved <= 0)
         {
             if (AR_SOCKET_LAST_ERROR == EINTR)
             {
@@ -721,7 +723,7 @@ int32_t TcpipCmdServer::process_message(
     svc_cmd_id = 0;
     ar_mem_cpy(&svc_cmd_id, ATS_SERVICE_COMMAND_ID_LENGTH,
         msg_buffer + ATS_SERVICE_COMMAND_ID_POSITION, ATS_SERVICE_COMMAND_ID_LENGTH);
-    
+
     tcpip_cmd_server_get_ats_command_length(msg_buffer, msg_length, &data_length);
     ATS_SERVICE_ID_STR(svc_id_str, ATS_SEVICE_ID_STR_LEN, svc_cmd_id);
     TCPIP_CMD_SVR_DBG("Command[%s-%d]: Request data length is %d bytes", svc_id_str, ATS_GET_COMMAND_ID(svc_cmd_id), data_length);
@@ -741,7 +743,7 @@ int32_t TcpipCmdServer::process_message(
     }
 
     //passing received data and blank output buffer to ats upcall
-    execute_command((uint8_t *)message_buffer.buffer, (uint32_t)msg_length, 
+    execute_command((uint8_t *)message_buffer.buffer, (uint32_t)msg_length,
         (uint8_t**)out_buf, &resp_len);
 
     //resp_len = recvlen_ptr;
@@ -817,9 +819,9 @@ int32_t TcpipCmdServer::execute_server_command(uint32_t service_cmd_id, uint32_t
             return AR_ENEEDMORE;
         }
 
-        ar_mem_cpy(&data_length, sizeof(uint32_t), 
+        ar_mem_cpy(&data_length, sizeof(uint32_t),
             this->message_buffer.buffer + ATS_DATA_LENGTH_POSITION, sizeof(uint32_t));
-        ar_mem_cpy(&new_buffer_size, sizeof(uint32_t), 
+        ar_mem_cpy(&new_buffer_size, sizeof(uint32_t),
             this->message_buffer.buffer + ATS_ACDB_BUFFER_POSITION, sizeof(uint32_t));
 
         //The new buffer size needs to be between the required range to resize the message buffer:
@@ -842,7 +844,7 @@ int32_t TcpipCmdServer::execute_server_command(uint32_t service_cmd_id, uint32_t
 
             ar_mem_set(message_buffer.buffer, 0, message_buffer.buffer_size);
 
-            /* Write the ATS command back to the resized message buffer so that the ATS Command 
+            /* Write the ATS command back to the resized message buffer so that the ATS Command
              * layer can resize its buffer.*/
             ar_mem_cpy(message_buffer.buffer, sizeof(uint32_t), &service_cmd_id, sizeof(uint32_t));
             offset += sizeof(uint32_t);

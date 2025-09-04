@@ -11,14 +11,14 @@
  *     atp_diag_init() must be called to initialise ATP protocol layer.
  *     atp_diag_init() must be called ~AFTER~ initialization of SOUND TASK
  *
- *     This file is common to both protocol component on PC and protocol 
- *     module on AMSS. PC only/phone only code is wrapped with in 
+ *     This file is common to both protocol component on PC and protocol
+ *     module on AMSS. PC only/phone only code is wrapped with in
  *     #ifdef WINPC
  *
  * \copyright
  *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
- * 
+ *
  *==============================================================================
  */
 /*
@@ -920,7 +920,7 @@ bool_t atp_receive_atp_frame (
         ATS_ERR("ATS FRAME: create mem for data");
 
         /**create memory for data */
-        atp_resp_frame_ptr->data_ptr = 
+        atp_resp_frame_ptr->data_ptr =
             ACDB_MALLOC(char_t, atp_resp_frame_ptr->header.frame_length);
 
 
@@ -932,7 +932,7 @@ bool_t atp_receive_atp_frame (
             ACDB_FREE(atp_resp_frame_ptr);
             return FALSE;
         }
-        
+
         ATS_ERR("ATS FRAME: copy data into response frame");
 		ATS_MEM_CPY_SAFE(atp_resp_frame_ptr->data_ptr,atp_resp_frame_ptr->header.frame_length,
                 context_ptr->resp_current_node_ptr->frame_ptr->data_ptr,
@@ -1112,7 +1112,7 @@ void atp_create_diag_resp_pkt (
 
     /** copy atp header info*/
 	ATS_MEM_CPY_SAFE(&(*atp_diag_pkt)->payload_resp[0], headersize, &atp_frame_ptr->header, headersize);
-    
+
     /**copy frame data*/
     if (atp_frame_ptr->data_ptr != NULL)
     {

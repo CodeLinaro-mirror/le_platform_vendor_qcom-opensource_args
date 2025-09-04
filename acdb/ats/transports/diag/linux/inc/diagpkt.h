@@ -72,10 +72,10 @@ do { \
 /*--------------------------------------------------------------------------
 * Functions
 *-------------------------------------------------------------------------*/
-
+
 void *diagpkt_subsys_alloc (diagpkt_subsys_id_type id,
 diagpkt_subsys_cmd_code_type code, unsigned int length);
-
+
 void diagpkt_commit (void *ptr);
 
 diagpkt_subsys_cmd_code_type diagpkt_subsys_get_cmd_code (void *ptr);

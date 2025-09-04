@@ -3,7 +3,7 @@
  * \file ar_osal_shmem.c
  *
  * \brief
- *      This file has implementation of shared memory allocation for DSP.
+ *      This file has implementation for ION based shared memory allocation for DSP.
 
  * \copyright
  *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.

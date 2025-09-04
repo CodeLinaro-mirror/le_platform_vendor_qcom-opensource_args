@@ -87,6 +87,7 @@ int32_t fts_open_file(
     if (AR_FAILED(status))
     {
         ATS_ERR("Error(%d), FileAccessType(%d): Failed to open/create %s", status, req.access, req.file_path);
+        ACDB_FREE(fts_file_table->fhandle[findex]);
         return status;
     }
 

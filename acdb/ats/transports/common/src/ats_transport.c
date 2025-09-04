@@ -5,9 +5,9 @@
 *                    A T S  T R A N S P O R T  A P I
 *
 *   This file implements APIs for initializing/deinitializing ATS transports.
-*   
+*
 * \detdesc
-*	When adding a new transport, define a preprocessor macro for 
+*	When adding a new transport, define a preprocessor macro for
 *   enabling/disabling the transport. Not every platform may support your
 *   transport. It is up to the platform to decide if a transport is supported
 *   by enabling the preprocessor macro associated with the transport.
@@ -32,8 +32,8 @@
 #define ATS_TRANSPORT_INFO(...) AR_LOG_INFO(LOG_TAG, __VA_ARGS__)
 
 #if !defined(ATS_TRANSPORT_DIAG) && !defined(ATS_TRANSPORT_TCPIP)
-/* The DIAG transport is the default transport. If no transports are 
- * specified in the build configuration then ATS_TRANSPORT_DIAG 
+/* The DIAG transport is the default transport. If no transports are
+ * specified in the build configuration then ATS_TRANSPORT_DIAG
  * will be defined */
 #define ATS_TRANSPORT_DIAG
 #endif
@@ -90,4 +90,21 @@ int32_t ats_transport_deinit(void)
     #endif
 
     return status;
+}
+
+int32_t ats_transport_dls_send_callback(const uint8_t* buffer, uint32_t buffer_size)
+{
+	#if defined(ATS_TRANSPORT_TCPIP)
+
+	ATS_TRANSPORT_DBG("Sending %d bytes", buffer_size);
+	return tcpip_cmd_server_send_dls_log_data(buffer, buffer_size);
+
+	#else
+	__UNREFERENCED_PARAM(buffer);
+	__UNREFERENCED_PARAM(buffer_size);
+	/* We dont need to support diag since it already has support for pushing
+	 * binary log packets to the ats realtime tuning client */
+
+	return AR_EUNSUPPORTED;
+	#endif
 }

@@ -1326,6 +1326,7 @@ int32_t ats_rtc_get_vcpm_master_key_table(
     int32_t status = AR_EOK;
     uint32_t offset = 0;
     uint8_t *vcpm_cal = NULL;
+    AtsVcpmChunk *master_key_table_chunk = NULL;
     AtsVcpmInfoChunk *info = NULL;
 
     if (IsNull(sg_cal_data) || IsNull(master_key_table))
@@ -1348,6 +1349,7 @@ int32_t ats_rtc_get_vcpm_master_key_table(
         + sizeof(info->table_size) + info->table_size;
 
     /* Setup chunk pointers */
+    master_key_table_chunk = VCPM_PTR(AtsVcpmChunk, vcpm_cal, offset);
     offset += sizeof(AtsVcpmChunk);
 
     *master_key_table = VCPM_PTR(AtsVcpmMasterKeyTable, vcpm_cal, offset);
@@ -1366,6 +1368,7 @@ int32_t ats_rtc_get_vcpm_param_data(
     __UNREFERENCED_PARAM(rsp_buf_size);
     int32_t status = AR_EOK;
     uint32_t offset = 0;
+    uint32_t base_dp_offset = 0;
     uint32_t blob_offset = 0;
     uint32_t vckt_offset = 0;
     uint32_t vlut_offset = 0;
@@ -1413,6 +1416,7 @@ int32_t ats_rtc_get_vcpm_param_data(
     offset += sizeof(AtsVcpmChunk)
         + lookup_table_chunk->size;
     data_pool_chunk = VCPM_PTR(AtsVcpmChunk, vcpm_cal, offset);
+    base_dp_offset = offset;
 
     /* Find active CKV Calibration and write matching <iid, pid> to response.
     * The response buffer contains the active CKV, but once the Voice CKV

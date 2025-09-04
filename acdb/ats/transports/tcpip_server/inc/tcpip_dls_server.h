@@ -1,10 +1,10 @@
-#ifndef _TCPIP_RTM_SERVER_H_
-#define _TCPIP_RTM_SERVER_H_
+#ifndef _TCPIP_DLS_SERVER_H_
+#define _TCPIP_DLS_SERVER_H_
 /**
 *=============================================================================
-*  \file tcpip_rtm_server.h
+*  \file tcpip_dls_server.h
 *  \brief
-*                      T C P I P  R T M  S E R V E R
+*                      T C P I P  D L S  S E R V E R
 *                           H E A D E R  F I L E
 *
 *    This file contains the TCP/IP server implementation to host connections
@@ -13,16 +13,15 @@
 *    new connections, the server creates new receiving threads that handles
 *    all ATS upcalls.
 *
-*  \cond
+*     ATS_DATA_LOGGING must be defined in the build configuration to use
+*     this feature
+*  \copyright
 *      Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *      SPDX-License-Identifier: BSD-3-Clause-Clear
-*  \endcond
 *=============================================================================
 */
 #ifdef ATS_TRANSPORT_TCPIP
-
-//#define FEATURE_ATS_PUSH //TODO: remove this after adding it to the build settings
-#if defined(FEATURE_ATS_PUSH)
+#ifdef ATS_DATA_LOGGING
 
 #include <string>
 #include "ar_osal_types.h"
@@ -37,9 +36,9 @@
 #define TCPIP_THREAD_PRIORITY_LOW 1
 #define TCPIP_THD_STACK_SIZE 0xF4240 //1mb stack size
 
-#define TCPIP_RTM_SERVER_PORT 5560
+#define TCPIP_DLS_SERVER_PORT 5561
 
-class TcpipRtmServer
+class TcpipDlsServer
 {
 public:
 	std::string address;
@@ -51,25 +50,26 @@ private:
 	ar_osal_mutex_t connection_lock;
 	ar_osal_thread_t thread;
 public:
-	TcpipRtmServer() = default;
-	TcpipRtmServer(std::string thd_name);
+	TcpipDlsServer() = default;
+	TcpipDlsServer(std::string thd_name);
 	int32_t start();
 	int32_t stop();
 
 	void* connect_routine(void* args);
 
 	/* \brief
-	*	Sends RTM packets to the client
-	*	param[in] buffer: a data buffer containing the RTM packet data
-	*	param[in] buffer: The size of the buffer containing the RTM packet data
+	*	Sends DLS log buffers to the client
+	*	param[in] buffer: a data buffer containing the DLS packet data
+	*	param[in] buffer: The size of the buffer containing the DLS packet data
 	*/
-	int32_t send_rtm_data(const char_t* buffer, uint32_t buffer_size);
+	int32_t send_dls_log_buffers(const char_t* buffer, uint32_t buffer_size);
 
 private:
 	int32_t set_connected_lock(uint8_t is_conn);
 
 	static void connect(void* arg);
 };
-#endif /* FEATURE_ATS_PUSH */
+
+#endif /*ATS_DATA_LOGGING*/
 #endif /*ATS_TRANSPORT_TCPIP*/
-#endif /* _TCPIP_RTM_SERVER_H_ */
+#endif /* _TCPIP_DLS_SERVER_H_ */

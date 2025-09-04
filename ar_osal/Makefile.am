@@ -35,8 +35,20 @@ osal_c_sources = ./src/linux/ar_osal_file_io.c \
                  ./src/linux/ar_osal_string.c \
                  ./src/linux/ar_osal_thread.c \
                  ./src/linux/ar_osal_timer.c \
-		 ./src/linux/qcom/ar_osal_shmem_db.c \
-		  ./src/linux/qcom/ar_osal_servreg.c
+                 ./src/linux/qcom/ar_osal_servreg.c \
+                 ./src/linux/qcom/dyn_pd/ar_osal_dyn_pd.c
+
+
+if ARGS_VENDOR_QCOM
+if AUDIO_DMA_SUPPORT
+osal_c_sources += ./src/linux/qcom/ar_osal_shmem_db.c
+else # Use ion based shmem implementation.
+osal_c_sources += ./src/linux/qcom/ar_osal_shmem_ion.c
+endif
+else #!ARGS_VENDOR_QCOM
+# Use virtual memory based shmem implementation
+osal_c_sources += ./src/linux/ar_osal_shmem.c
+endif
 
 if USE_DUMMY_DIAG
 osal_c_sources += ./src/linux/ar_osal_stub_log_pkt_op.c
@@ -49,22 +61,40 @@ if ARGS_USE_SYSLOG
 AM_CFLAGS += -DAR_OSAL_USE_SYSLOG
 endif
 
+if LINUX_HEADER_KLM
+AM_CFLAGS += -DMSM_AUDIO_KLM
+endif
+
 libar_osal_la_LIBADD = -lrt -lpthread
 
 if CUTILS_SUPPORTED
-libar_osal_la_LIBADD += -lcutils
+libar_osal_la_LIBADD += -lcutils -llog
 AM_CFLAGS += -DAR_OSAL_USE_CUTILS
+endif
+
+if ION_DRIVER_NOT_SUPPORTED
+AM_CFLAGS += -DION_DRIVER_UNSUPPORTED
 endif
 
 if USE_GLIB
 libar_osal_la_LIBADD += -lglib-2.0
-AM_CFLAGS += $(GLIB_CFLAGS) -D_GNU_SOURCE -Dstrlcat=g_strlcat -Dstrlcpy=g_strlcpy -include glib.h
+AM_CFLAGS += $(GLIB_CFLAGS) -D_GNU_SOURCE -include glib.h
+endif
+
+if USE_G_STR_FUNC
+AM_CFLAGS += -Dstrlcpy=g_strlcpy -Dstrlcat=g_strlcat
 endif
 
 lib_includedir = $(includedir)
 lib_include_HEADERS = $(osal_sources)
-lib_LTLIBRARIES = libar_osal.la
+lib_LTLIBRARIES = libar-osal.la
 libar_osal_la_CC = @CC@
 libar_osal_la_SOURCES = $(osal_c_sources)
-libar_osal_la_CFLAGS = $(AM_CFLAGS)
-libar_osal_la_LDFLAGS = -shared -avoid-version
+libar_osal_la_CFLAGS = $(AM_CFLAGS) @DIAG_CFLAGS@
+
+if LIBION_SUPPORTED
+libar_osal_la_LIBADD += -lion
+libar_osal_la_CFLAGS += @LIBION_CFLAGS@
+endif
+
+libar_osal_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@

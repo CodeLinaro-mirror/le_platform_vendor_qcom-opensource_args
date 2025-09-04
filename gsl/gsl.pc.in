@@ -5,6 +5,6 @@ includedir=@includedir@
 
 Name: gsl
 Description: gsl library
-Version: @VERSION@
-Libs: -L${libdir} -lgsl
+Version: @LT_VERSION@
+Libs: -L${libdir} -lar-gsl
 Cflags: -I${includedir}

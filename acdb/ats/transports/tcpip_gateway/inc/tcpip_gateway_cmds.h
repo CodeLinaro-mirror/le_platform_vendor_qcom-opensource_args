@@ -9,17 +9,16 @@
 *
 *         This file contains definitions for server commands
 *
-*  \cond
+*  \copyright
 *      Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *      SPDX-License-Identifier: BSD-3-Clause-Clear
-*  \endcond
 *==============================================================================
 */
 #include "ar_osal_types.h"
 
 /* NOTE:
- * The commands in this file originate from ats_i.h. We cannot include 
- * ats_i.h b/c it contains acdb.h which will require that you compile the AML 
+ * The commands in this file originate from ats_i.h. We cannot include
+ * ats_i.h b/c it contains acdb.h which will require that you compile the AML
  * library. The ATS gateway server has no dependencies on ATS or AML libraries.
  */
 
@@ -32,7 +31,7 @@
 
  /* ATS Message formats
  * Request Format (for incoming messages)
- * 
+ *
  * <--------- 4 bytes ----------->
  * +-----------------------------+
  * |  service id  |  command id  |
@@ -46,7 +45,7 @@
  *
  *
  * Response Format (outgoing messages)
- * 
+ *
  * <-----------4bytes------------>
  * +-----------------------------+
  * |  service id  |  command id  |

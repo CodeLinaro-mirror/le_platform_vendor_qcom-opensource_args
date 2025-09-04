@@ -2,7 +2,7 @@
 #define __RX_HAPTICS_API_H__
 
 /*==============================================================================
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
 
   @file rx_haptics_api.h
@@ -14,7 +14,8 @@
 
   when          who        what, where, why
   --------      ---        ------------------------------------------------------
-  06/21/2022  deepjind    Haptics
+  06/21/2022    deepjind   Haptics
+  02/28/2025    shyap      Haptics v2.3
 ==============================================================================*/
 
 /** @h2xml_title1           {Haptics-RX}
@@ -52,6 +53,7 @@
      - #PARAM_ID_HAPTICS_OP_MODE\n
      - #PARAM_ID_HAPTICS_DYNAMIC_CFG\n
      - #PARAM_ID_HAPTICS_WAVE_DESIGNER_CFG\n
+     - #PARAM_ID_HAPTICS_WAVE_DESIGNER_CFG_V2\n
      - #PARAM_ID_HAPTICS_WAVE_DESIGNER_STOP_PARAM\n
      - #PARAM_ID_HAPTICS_WAVE_DESIGNER_UPDATE_PARAM\n
      - #PARAM_ID_HAPTICS_EFFECT_0_DATA_PARAM\n
@@ -78,6 +80,19 @@
      - #PARAM_ID_HAPTICS_EX_DEMO_PARAM\n
      - #PARAM_ID_HAPTICS_VERSION\n
      - #PARAM_ID_HAPTICS_WAVE_DESIGNER_STATE\n
+     - #PARAM_ID_HAPTICS_RX_EFFECTS_CONFIG_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_FTM_DATA_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_CALIB_DATA_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_PERSISTENT_DATA_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_PCMV_PLAYBACK\n
+     - #PARAM_ID_HAPTICS_RX_FTM_CFG\n
+     - #PARAM_ID_HAPTICS_LPASS_SWR_HW_REG_CFG\n
+     - #PARAM_ID_HAPTICS_RX_TUNING_DATA_0_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_TUNING_DATA_1_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_TUNING_DATA_2_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_TUNING_DATA_3_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_TUNING_DATA_4_PARAM\n
+     - #PARAM_ID_HAPTICS_RX_VISENSE_CFG\n
 
       All parameter IDs are device independent.\n
 
@@ -96,13 +111,13 @@ supported bps
      @h2xmlm_toolPolicy              {Calibration}
 
     @h2xmlm_dataMaxInputPorts    {HAPTICS_MAX_INPUT_PORTS}
-     @h2xmlm_dataInputPorts       {IN=2}
-     @h2xmlm_dataMaxOutputPorts   {HAPTICS_MAX_OUTPUT_PORTS}
-     @h2xmlm_dataOutputPorts      {OUT=1}
-     @h2xmlm_supportedContTypes  {APM_CONTAINER_TYPE_GC}
-     @h2xmlm_isOffloadable        {false}
-     @h2xmlm_stackSize            {HAPTICS_STACK_SIZE}
-    @h2xmlm_ctrlDynamicPortIntent  { "Haptics VI intent id for communicating Vsens and Isens data" = INTENT_ID_HAPTICS, maxPorts=
+    @h2xmlm_dataInputPorts       {IN=2}
+    @h2xmlm_dataMaxOutputPorts   {HAPTICS_MAX_OUTPUT_PORTS}
+    @h2xmlm_dataOutputPorts      {OUT=1}
+    @h2xmlm_supportedContTypes   {APM_CONTAINER_TYPE_GC}
+    @h2xmlm_isOffloadable        {false}
+    @h2xmlm_stackSize            {HAPTICS_STACK_SIZE}
+    @h2xmlm_ctrlDynamicPortIntent  { "Haptics VI intent id for communicating Vsens and Isens data" = 0x0800136E, maxPorts=
 1 }
      @h2xmlm_ToolPolicy              {Calibration}
 
@@ -146,6 +161,7 @@ supported bps
     SINUSOIDAL = 2, // Sinusoidal waveform designer mode
     PCMV_RINGTONE = 3,  // Pre-canned haptics waveform mode for ringtone haptics
     PCMV_EFFECTS = 4,   // Pre-canned haptics waveform mode for pre-defined effects
+	PCMV_PLAYBACK = 5, // Pre-canned haptics waveform mode for pcmv playback from HLOS
     MAX_WAVE_DSN_MODE = 0xFFFFFFFF  // max 32-bit unsigned value. tells the compiler to use 32-bit data type
 } WAVE_DSN_MODE_T; */
 
@@ -178,8 +194,8 @@ struct param_id_haptics_static_config_t
          @h2xmle_default     {48000} */
     uint32_t bits_per_sample;       // Number of bits for input and output samples, (per channel)
     /**< @h2xmle_description {Bits per sample for Rx signal.}
-         @h2xmle_rangeList   {"16"=16;"24"=24}
-         @h2xmle_default     {24} */
+         @h2xmle_rangeList   {"16"=16;"32"=32}
+         @h2xmle_default     {16} */
     uint32_t num_channels;          // Number of LRAs/ number of channels for Rx signal.
     /**< @h2xmle_description {Number of channels for Rx signal.}
          @h2xmle_rangeList   {"1"=1;"2"=2}
@@ -191,7 +207,7 @@ struct param_id_haptics_static_config_t
     uint32_t features;              // what sub-features are on
     /**< @h2xmle_description {Features enabled in the WSA smart haptics
                             algorithm.}
-         @h2xmle_range       {0..0x03}
+         @h2xmle_range       {0..0x07}
 
          @h2xmle_bitField    {0x00000001}
          @h2xmle_bitName     {"Thermal tracking"}
@@ -205,6 +221,13 @@ struct param_id_haptics_static_config_t
          @h2xmle_description {Excursion control}
          @h2xmle_rangeList   {disabled=0;enabled=1}
          @h2xmle_default     {1}
+         @h2xmle_bitFieldEnd 
+         
+         @h2xmle_bitField    {0x00000004}
+         @h2xmle_bitName     {"Excursion control static gain support"}
+         @h2xmle_description {Excursion control static gain support}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}
          @h2xmle_bitFieldEnd */
     uint32_t pt_lvl_switch_en;      // dynamic pilot tone level switch enable/disable flag
     /**< @h2xmle_description {Flag to enable/disable the dynamic pilot tone level switch.}
@@ -212,9 +235,9 @@ struct param_id_haptics_static_config_t
          @h2xmle_default     {0} */
     int32_t pt_masking_thr_q27;     // when input level is below this threshold, pilot tone is disabled
     /**< @h2xmle_description {Specifies the input level threshold below which the pilot tone is disabled.}
-         @h2xmle_range       {0..134217727}
+         @h2xmle_range       {0..0x7FFFFFFF}
          @h2xmle_dataFormat  {Q27}
-         @h2xmle_default     {189813} */
+         @h2xmle_default     {134217728} */
     uint32_t ex_block_size;
     /**< @h2xmle_description {excursion control block size - number of frames used for excursion control}
          @h2xmle_range       {3..3}
@@ -301,6 +324,124 @@ struct param_id_haptics_op_mode {
          @h2xmle_rangeList   {"Normal Running mode"=0;
                               "Calibration mode"=1;
                               "Factory Test Mode"=2}*/
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+  ==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_PCMV_PLAYBACK 0x08001AE3
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_pcmv_playback param_id_haptics_rx_pcmv_playback;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_PCMV_PLAYBACK",
+                         PARAM_ID_HAPTICS_RX_PCMV_PLAYBACK}
+    @h2xmlp_description {PCMV Playback mode buffer ptr, size set param}
+    @h2xmlp_toolPolicy  {NO_SUPPORT} */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_haptics_rx_pcmv_playback {
+    uint32_t channel_mask;  // Mask to indicate to which channel(s) the buffer is being set, for mono set this to 1
+    /**< @h2xmle_description {Mask to indicate which channel(s) have a valid UPDATE command.}
+         @h2xmle_range       {0..0x02}
+
+         @h2xmle_bitField    {0x00000001}
+         @h2xmle_bitName     {"Channel 1"}
+         @h2xmle_description {Enabling this bit will indicate a valid PCMV Playback buffer set to Channel 1.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {1}
+         @h2xmle_bitFieldEnd
+
+         @h2xmle_bitField    {0x00000002}
+         @h2xmle_bitName     {"Channel 2"}
+         @h2xmle_description {Enabling this bit will indicate a valid PCMV Playback buffer set to Channel 2.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}
+         @h2xmle_bitFieldEnd */
+    int32_t buffer_size; // Buffer size in bytes
+    /**< @h2xmle_description {Length of the effect PCM buffer in bytes, (48kHz, 16-bit mono, Q15 format), Max duration supported is 10 sec}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x000EA600} */
+#ifdef __H2XML__
+    uint8_t buffer_ptr[0]; // PCMV Playback mode buffer pointer
+    /**< @h2xmle_description {Haptics PCMV playback data buffer. PCM data format: 48kHz, 16-bit mono, Q15 format)}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+  ==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_FTM_CFG 0x08001B1C
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_ftm_cfg_t param_id_haptics_rx_ftm_cfg_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_FTM_CFG",
+                         PARAM_ID_HAPTICS_RX_FTM_CFG}
+    @h2xmlp_description {Parameter to set FTM configuration}
+    @h2xmlp_toolPolicy  {CALIBRATION} */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_haptics_rx_ftm_cfg_t {
+    uint32_t non_linearity_compensation;        // Enable/Disable duffing non linearity compensation
+    /**< @h2xmle_description {Enable/Disable duffing non linearity compensation}
+         @h2xmle_rangeList   {"Disabled"=0;
+                              "Enabled"=1}*/
+    int32_t ftm_amplitude_q24[HAPTICS_MAX_OUT_CHAN];     // FTM playback amplitude level in Volts
+    /**< @h2xmle_description {FTM playback amplitude level in Volts}
+         @h2xmle_range       {0..0x7FFFFFFF}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {16777216} */
+    int32_t f0_tracking_duration_ms[HAPTICS_MAX_OUT_CHAN];     // f0 tracking duration in ms
+    /**< @h2xmle_description {FTM f0 tracking duration in ms}
+         @h2xmle_range       {0..1000}
+         @h2xmle_default     {250} */
+    int32_t f0_duffing_duration_ms[HAPTICS_MAX_OUT_CHAN];     // FTM f0 tracking non linearity compensation max duration in ms
+    /**< @h2xmle_description {FTM f0 tracking non linearity compensation max duration in ms}
+         @h2xmle_range       {0..8000}
+         @h2xmle_default     {6000} */
+    int32_t rtcl_gain_k_0_q27[HAPTICS_MAX_OUT_CHAN];     // RTCL gain_k[0]
+    /**< @h2xmle_description {RTCL gain_k[0]}
+         @h2xmle_range       {-7..7}
+         @h2xmle_dataFormat  {Q27}
+         @h2xmle_default     {0} */
+    int32_t rtcl_gain_k_1_q27[HAPTICS_MAX_OUT_CHAN];     // RTCL gain_k[1]
+    /**< @h2xmle_description {RTCL gain_k[1]}
+         @h2xmle_range       {-7..7}
+         @h2xmle_dataFormat  {Q27}
+         @h2xmle_default     {0} */
+    int32_t rtcl_gain_l_0_q27[HAPTICS_MAX_OUT_CHAN];     // RTCL gain_l[0]
+    /**< @h2xmle_description {RTCL gain_l[0]}
+         @h2xmle_range       {-7..7}
+         @h2xmle_dataFormat  {Q27}
+         @h2xmle_default     {0} */
+    int32_t rtcl_gain_l_1_q27[HAPTICS_MAX_OUT_CHAN];     // RTCL gain_l[1]
+    /**< @h2xmle_description {RTCL gain_l[1]}
+         @h2xmle_range       {-7..7}
+         @h2xmle_dataFormat  {Q27}
+         @h2xmle_default     {0} */
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -414,6 +555,162 @@ struct param_id_haptics_dynamic_cfg
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
 ;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_FTM_DATA_PARAM 0x08001ADE
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_ftm_data_param_t param_id_haptics_rx_ftm_data_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_FTM_DATA_PARAM", PARAM_ID_HAPTICS_RX_FTM_DATA_PARAM}
+    @h2xmlp_description {Parameter for registering haptics ftm data to lib}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_ftm_data_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for FTM data file}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of ftm data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the FTM data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00000064} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics FTM data: The path to the FTM cal file}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_CALIB_DATA_PARAM 0x08001ADF
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_calib_data_param_t param_id_haptics_rx_calib_data_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_CALIB_DATA_PARAM", PARAM_ID_HAPTICS_RX_CALIB_DATA_PARAM}
+    @h2xmlp_description {Parameter for registering haptics calibration data to lib.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_calib_data_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for Calibration data file}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of calibration data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the calibration data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00000064} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics calibration data: The path to the calibration cal file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_PERSISTENT_DATA_PARAM 0x08001B1A
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_persistent_data_param_t param_id_haptics_rx_persistent_data_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_PERSISTENT_DATA_PARAM",
+                    PARAM_ID_HAPTICS_RX_PERSISTENT_DATA_PARAM}
+    @h2xmlp_description {Parameter for registering haptics persistent data to lib.}
+    @h2xmlp_toolPolicy  {RTC_READONLY}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_persistent_data_param_t {
+    int32_t Re_ohm_q24[HAPTICS_MAX_OUT_CHAN];
+    /**< @h2xmle_description {DC resistance of LRA coil at room temperature, in Ohms. Default = 8Ohm, Range: 2 to 128Ohms}
+         @h2xmle_range       {33554432..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {134217728} */
+    int32_t Le_mH_q24[HAPTICS_MAX_OUT_CHAN];
+    /**< @h2xmle_description {Inductance of LRA coil at room temperature, in mH. Default = 0.04mH, Range: 0.001mH to 128mH}
+         @h2xmle_range       {16777..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {671088} */
+    int32_t Bl_q24[HAPTICS_MAX_OUT_CHAN];
+    /**< @h2xmle_description {Force factor (Bl product). Default = 1, Range: 0.01 to 128}
+         @h2xmle_range       {167772..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {16777216} */
+    int32_t Rms_KgSec_q24[HAPTICS_MAX_OUT_CHAN];
+    /**< @h2xmle_description {Mechanical damping or resistance of LRA, in kg/s. Default = 0.0945kg/s, Range = 0.0001 to 20kg/s}
+         @h2xmle_range       {16777..335544320}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {1585446} */
+    int32_t Kms_Nmm_q24[HAPTICS_MAX_OUT_CHAN];
+    /**< @h2xmle_description {Mechanical stiffness of driver suspension, in N/mm. Default = 1.838N/mm, Range = 0.1 to 50N/mm}
+         @h2xmle_range       {1677721..838860800}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {30836523} */
+    int32_t Fres_Hz_q20[HAPTICS_MAX_OUT_CHAN];
+    /**< @h2xmle_description {Resonance frequency, in Hz. Default = 160Hz, Range = 50 to 400Hz}
+         @h2xmle_range       {52428800..419430400}
+         @h2xmle_dataFormat  {Q20}
+         @h2xmle_default     {167772160} */
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
 
 /*==============================================================================
      Constants
@@ -605,6 +902,200 @@ struct param_id_haptics_wave_designer_config_t {
 ==============================================================================*/
 
 /* Unique Paramter id */
+#define PARAM_ID_HAPTICS_WAVE_DESIGNER_CFG_V2 0x08001B1B
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct rx_wave_designer_config_v2_h rx_wave_designer_config_v2_h;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+/** @h2xmlp_subStruct */
+struct rx_wave_designer_config_v2_h {
+    // Waveform designer mode parameters
+    uint32_t wave_design_mode;    // Waveform designer mode parameter
+    /**< @h2xmle_description {Waveform designer mode parameter. Lower 16b represents the wave designer mode.
+                              When mode is Pre-canned (Effects), upper 16b represents the effect ID; for all other modes these bits are ignored.}
+         @h2xmle_rangeList   {"Parametric"          = 0x00000000;
+                              "Piece-wise Linear"   = 0x00000001;
+                              "Sinusoidal"             = 0x00000002;
+                              "PCMV Ringtone"         = 0x00000003;
+                              "Pre-canned Effect 0" = 0x00000004;
+                              "Pre-canned Effect 1" = 0x00010004;
+                              "Pre-canned Effect 2" = 0x00020004;
+                              "Pre-canned Effect 3" = 0x00030004;
+                              "Pre-canned Effect 4" = 0x00040004;
+                              "Pre-canned Effect 5" = 0x00050004;
+                              "Pre-canned Effect 6" = 0x00060004;
+                              "Pre-canned Effect 7" = 0x00070004;
+                              "Pre-canned Effect 8" = 0x00080004;
+                              "Pre-canned Effect 9" = 0x00090004;
+                              "Pre-canned Effect10" = 0x000A0004;
+                              "Pre-canned Effect11" = 0x000B0004;
+                              "Pre-canned Effect12" = 0x000C0004;
+                              "Pre-canned Effect13" = 0x000D0004;
+                              "Pre-canned Effect 14" = 0x000E0004;
+                              "PCMV Playback"        = 0x00000005}
+         @h2xmle_default     {0} */
+
+    int32_t auto_overdrive_brake_en;    // Flag to enable/ disable auto overdrive and brake
+    /**< @h2xmle_description {Flag to enable/ disable auto overdrive and brake. Considered in Sinusoidal mode only.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {1} */
+    int32_t f0_tracking_en;    // Flag to enable/ disable resonance frequency tracking
+    /**< @h2xmle_description {Flag to enable/ disable resonance frequency tracking. Considered in Sinusoidal mode only.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {1} */
+    int32_t rtcl_mode;    // Real-time closed loop mode
+    /**< @h2xmle_description {Choose real time closed loop mode. Considered in all waveform designer modes.}
+         @h2xmle_rangeList   {disabled=0;tracking=1;braking=2;ltf_mode=3}
+         @h2xmle_default     {0} */
+    int32_t pmic_autobrake_en;    // Flag to enable/disable PMIC autobraking
+    /**< @h2xmle_description {Flag to enable/disable PMIC autobraking. Considered in all modes except PCMV Ringtone.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0} */
+    int32_t f0_tracking_param_reset_flag; // If this flag is enabled and f0 tracking is disabled, LRA parameters will be reset to calibration parameters (instead of cached parameters).
+    /**<@h2xmle_description  {If this flag is enabled and f0 tracking is disabled, LRA parameters will be reset to calibration parameters (instead of cached parameters). Considered in all modes.}
+        @h2xmle_rangeList    {disabled=0;enabled=1}
+        @h2xmle_default      {0} */
+
+    uint32_t override_flag; // Mask to indicate the parameters for which default value will be overridden.
+    /**< @h2xmle_description {Mask to indicate the parameters for which default value will be overridden. Considered in all modes.}
+         @h2xmle_range       {0..0x0f}
+
+         @h2xmle_bitField    {0x00000001}
+         @h2xmle_bitName     {"Tracked frequency warmup time"}
+         @h2xmle_description {If this bit is enabled, tracked_freq_warmup_time_ms field will be considered.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}
+         @h2xmle_bitFieldEnd
+
+         @h2xmle_bitField    {0x00000002}
+         @h2xmle_bitName     {"Settling time"}
+         @h2xmle_description {If this bit is enabled, settling_time_ms field will be considered.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}
+         @h2xmle_bitFieldEnd
+
+         @h2xmle_bitField    {0x00000004}
+         @h2xmle_bitName     {"Delay time"}
+         @h2xmle_description {If this bit is enabled, delay_time_ms field will be considered.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}
+         @h2xmle_bitFieldEnd
+
+         @h2xmle_bitField    {0x00000008}
+         @h2xmle_bitName     {"Waveform generator fstart"}
+         @h2xmle_description {If this bit is enabled, wavegen_fstart_hz_q20 field will be considered.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}
+         @h2xmle_bitFieldEnd */
+
+    int32_t tracked_freq_warmup_time_ms;  // Time delay before enabling resonance frequency tracking (in ms).
+    /**< @h2xmle_description {Time delay before enabling resonance frequency tracking, in ms. Considered only if corresponding bit is enabled in `override_flag`.}
+         @h2xmle_range       {0..10000} ms
+         @h2xmle_default     {0}*/
+    int32_t settling_time_ms;  // Maximum time delay for the haptics waveform to settle to zero, after actuation ends (in ms).
+    /**< @h2xmle_description {Maximum time delay for the haptics waveform to settle to zero after actuation ends, in ms. Considered only if corresponding bit is enabled in `override_flag`.}
+         @h2xmle_range       {5..100} ms
+         @h2xmle_default     {30}*/
+    int32_t delay_time_ms;          // Waveform designer parametric mode parameter. Time delay at the start and end of the pulse acceleration waveform (in ms). Considered only when corresponding bit is enabled in override_flag.
+    /**< @h2xmle_description {Waveform designer parametric mode parameter. Time delay at the start and end of the parametric waveform, in ms. Considered only if corresponding bit is enabled in `override_flag`.}
+         @h2xmle_range       {0..100} ms
+         @h2xmle_default     {0}*/
+    int32_t wavegen_fstart_hz_q20;      // Starting frequency in Hz.
+    /**< @h2xmle_description {Starting frequency for the waveform designer, in Hz. Considered only if corresponding bit is enabled in `override_flag`.}
+         @h2xmle_range       {52428800..419430400} Hz
+         @h2xmle_default     {157286400}
+         @h2xmle_dataFormat  {Q20} */
+
+    int32_t repetition_count;           // No. of repetitions of the haptics waveform
+    /**< @h2xmle_description {No. of repetitions of the haptics waveform. Considered in Parametric, PWL, Sinusoidal modes only.} */
+    int32_t repetition_period_ms;       // Time period of one repetition
+    /**< @h2xmle_description {Time period of one repetition, in ms. Considered in Parametric, PWL, Sinusoidal modes only.} */
+    uint32_t pilot_tone_en;             // Flag to enable/disable pilot tone
+    /**< @h2xmle_description {Flag to enable/disable pilot tone. Considered in all modes.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}*/
+    int32_t pulse_intensity;            // Pulse intensity as percentage of maximum acceleration
+    /**< @h2xmle_description {Pulse intensity as percentage of maximum acceleration, in %. Considered in Parametric, Sinusoidal modes only.}
+         @h2xmle_range       {0..100}
+         @h2xmle_default     {0}*/
+    int32_t pulse_width_ms;             // Haptics waveform duration
+    /**< @h2xmle_description {Haptics waveform duration, in ms. Considered in Parametric, Sinusoidal modes only.} */
+    int32_t pulse_sharpness;            // Pulse sharpness as percentage of maximum rise/fall time
+    /**< @h2xmle_description {Pulse sharpness as percentage of maximum rise/fall time, in %. Considered in Parametric mode only.}
+         @h2xmle_range       {0..100}
+         @h2xmle_default     {0}*/
+    int32_t num_pwl;                    // No. of waveform points in piece-wise linear waveform
+    /**< @h2xmle_description {No. of waveform points in piece-wise linear waveform. Considered in PWL mode only.} */
+#ifdef __H2XML__
+    int32_t pwl_time[0];                   // Time indices for piece-wise linear waveform
+    /**< @h2xmle_description {Time indices for piece-wise linear waveform, in ms. Considered in PWL mode only.}
+         @h2xmle_variableArraySize  {num_pwl} */
+    int32_t pwl_acc[0];                    // Acceleration values corresponding to piece-wise linear waveform, as percentage of max acceleration
+    /**< @h2xmle_description {Acceleration values corresponding to piece-wise linear waveform, as percentage of max acceleration, in %. Considered in PWL mode only.}
+         @h2xmle_variableArraySize  {num_pwl} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_wave_designer_config_v2_t param_id_haptics_wave_designer_config_v2_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_WAVE_DESIGNER_CFG_V2",
+                          PARAM_ID_HAPTICS_WAVE_DESIGNER_CFG_V2}
+    @h2xmlp_description {Waveform designer configuration v2.}
+    @h2xmlp_toolPolicy  {RTC_READONLY}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_wave_designer_config_v2_t {
+    uint32_t num_channels;
+    /**< @h2xmle_description {Number of valid channel configurations that are sent. num_channels= 1 supports channel_mask 1 and 2, num_channels= 2 supports channel_mask 3}
+         @h2xmle_rangeList   {"1"=1;"2"=2}
+         @h2xmle_default     {1} */
+    uint32_t channel_mask;
+    /**< @h2xmle_description {Mask to indicate which channel(s) have a valid waveform designer configuration.}
+         @h2xmle_range       {0..0x03}
+
+         @h2xmle_bitField    {0x00000001}
+         @h2xmle_bitName     {"Channel 1"}
+         @h2xmle_description {Enabling this bit will indicate a valid configuration for Channel 1.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {1}
+         @h2xmle_bitFieldEnd
+
+         @h2xmle_bitField    {0x00000002}
+         @h2xmle_bitName     {"Channel 2"}
+         @h2xmle_description {Enabling this bit will indicate a valid configuration for Channel 2.}
+         @h2xmle_rangeList   {disabled=0;enabled=1}
+         @h2xmle_default     {0}
+         @h2xmle_bitFieldEnd */
+#ifdef __H2XML__
+    rx_wave_designer_config_v2_h rx_wave_designer_config_v2[0]; // Wave designer configuration for each channel
+    /**< @h2xmle_description {Wave designer configuration for each channel.}
+         @h2xmle_variableArraySize  {num_channels} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
 #define PARAM_ID_HAPTICS_WAVE_DESIGNER_STOP_PARAM 0x0800139A
 
 /*==============================================================================
@@ -747,18 +1238,21 @@ typedef struct param_id_haptics_effect_0_data_t param_id_haptics_effect_0_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_0_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 0' haptics effect in Pre-canned (Effects) mode.
-                             Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 0"=0}
-         @h2xmle_default     {0} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 0': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -792,18 +1286,21 @@ typedef struct param_id_haptics_effect_1_data_t param_id_haptics_effect_1_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_1_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 1' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 1"=1}
-         @h2xmle_default     {1} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 1': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -836,18 +1333,21 @@ typedef struct param_id_haptics_effect_2_data_t param_id_haptics_effect_2_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_2_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 2' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 2"=2}
-         @h2xmle_default     {2} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 2': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -881,18 +1381,21 @@ typedef struct param_id_haptics_effect_3_data_t param_id_haptics_effect_3_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_3_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 3' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 3"=3}
-         @h2xmle_default     {3} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..7} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 3': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -926,18 +1429,21 @@ typedef struct param_id_haptics_effect_4_data_t param_id_haptics_effect_4_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_4_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 4' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 4"=4}
-         @h2xmle_default     {4} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 4': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -971,18 +1477,21 @@ typedef struct param_id_haptics_effect_5_data_t param_id_haptics_effect_5_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_5_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 5' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 5"=5}
-         @h2xmle_default     {5} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 5': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1016,18 +1525,21 @@ typedef struct param_id_haptics_effect_6_data_t param_id_haptics_effect_6_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_6_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 6' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 6"=6}
-         @h2xmle_default     {6} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 6': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1061,18 +1573,21 @@ typedef struct param_id_haptics_effect_7_data_t param_id_haptics_effect_7_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_7_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 7' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 7"=7}
-         @h2xmle_default     {7} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 7': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1106,18 +1621,21 @@ typedef struct param_id_haptics_effect_8_data_t param_id_haptics_effect_8_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_8_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 8' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 8"=8}
-         @h2xmle_default     {8} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 8': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1151,18 +1669,21 @@ typedef struct param_id_haptics_effect_9_data_t param_id_haptics_effect_9_data_t
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_9_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 9' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 9"=9}
-         @h2xmle_default     {9} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 9': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1196,18 +1717,21 @@ typedef struct param_id_haptics_effect_10_data_t param_id_haptics_effect_10_data
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_10_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 10' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 10"=10}
-         @h2xmle_default     {10} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 10': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1241,18 +1765,21 @@ typedef struct param_id_haptics_effect_11_data_t param_id_haptics_effect_11_data
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_11_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 11' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 11"=11}
-         @h2xmle_default     {11} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 11': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1286,17 +1813,20 @@ typedef struct param_id_haptics_effect_12_data_t param_id_haptics_effect_12_data
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_12_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 12' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 12"=12}
-         @h2xmle_default     {12} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
+    uint8_t data[0];
     /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
@@ -1331,18 +1861,21 @@ typedef struct param_id_haptics_effect_13_data_t param_id_haptics_effect_13_data
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_13_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 13' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 13"=13}
-         @h2xmle_default     {13} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 13': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1376,18 +1909,21 @@ typedef struct param_id_haptics_effect_14_data_t param_id_haptics_effect_14_data
 #include "spf_begin_pragma.h"
 
 struct param_id_haptics_effect_14_data_t {
-    uint32_t effect_id;
-    /**< @h2xmle_description {ID for 'Effect 14' haptics effect in Pre-canned (Effects) mode.
-                              Note: The effect ID provided in wave_design_mode of wave designer config param should match this effect_id. }
-         @h2xmle_rangeList   {"Effect 14"=14}
-         @h2xmle_default     {14} */
-    uint32_t effect_size;
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for the effect data}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of effect data by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
     /**< @h2xmle_description {Length of the effect PCM data in bytes, (48kHz, 32-bit mono, Q31 format), Max duration supported is 2 sec}
-         @h2xmle_range       {0x0..0x0005DC00}
-         @h2xmle_default     {0} */
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x0005DC00} */
 #ifdef __H2XML__
-    uint8_t effect_data[0];
-    /**< @h2xmle_description {Haptics PCM data for 'Effect 14': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
+    uint8_t data[0];
+    /**< @h2xmle_description {Haptics PCM data for 'Effect 12': The path to the effect file in the file system (PCM data format: 48kHz, 32-bit mono, Q31 format)}
          @h2xmle_elementType {rawData}
          @h2xmle_displayType {stringField} */
 #endif
@@ -1402,95 +1938,312 @@ struct param_id_haptics_effect_14_data_t {
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_HAPTICS_CPS_PARAM 0x0800139C
+#define PARAM_ID_HAPTICS_RX_EFFECTS_CONFIG_PARAM 0x08001ADA
 
 /*==============================================================================
    Type definitions
 ==============================================================================*/
 
 /* Structure definition for Parameter */
-typedef struct param_id_haptics_cps_param_t param_id_haptics_cps_param_t;
+typedef struct param_id_haptics_rx_effects_config_param_t param_id_haptics_rx_effects_config_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_EFFECTS_CONFIG_PARAM", PARAM_ID_HAPTICS_RX_EFFECTS_CONFIG_PARAM}
+    @h2xmlp_description {Parameter for setting f0, R used to generate PCMV Effects waveforms.}
+    @h2xmlp_toolPolicy  {CALIBRATION;RTC_READONLY}*/
 
 #include "spf_begin_pack.h"
 #include "spf_begin_pragma.h"
 
-/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_CPS_PARAM",
-                          PARAM_ID_HAPTICS_CPS_PARAM}
-    @h2xmlp_description {CPS configuration parameters.}
+/* ToDO: Update to uint32_t */
+struct param_id_haptics_rx_effects_config_param_t {
+    int32_t Fres_Hz_q20[HAPTICS_MAX_OUT_CHAN]; // Resonance frequency used to generate PCMV Effects waveforms
+    /**< @h2xmle_description {Resonance frequency used to generate PCMV Effects waveforms, in Hz. Default = 0Hz, Range = 0 to 400Hz}
+         @h2xmle_range       {0..419430400}
+         @h2xmle_dataFormat  {Q20}
+         @h2xmle_default     {0} */
+    int32_t Re_ohm_q24[HAPTICS_MAX_OUT_CHAN];  // DC resistance of LRA coil used to generate PCMV Effects waveforms
+    /**< @h2xmle_description {DC resistance of LRA coil used to generate PCMV Effects waveforms, in Ohms. Default = 0 Ohm, Range: 0 to 128Ohms}
+         @h2xmle_range       {0..2147483647}
+         @h2xmle_dataFormat  {Q24}
+         @h2xmle_default     {0} */
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_TUNING_DATA_0_PARAM 0x08001B36
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_tuning_data_0_param_t param_id_haptics_rx_tuning_data_0_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_TUNING_DATA_0_PARAM", PARAM_ID_HAPTICS_RX_TUNING_DATA_0_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 0 to RX module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_tuning_data_0_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for RX module tuning data file for LRA 0}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of RX module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the RX module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {RX module tuning data for LRA 0: path to the RX module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_TUNING_DATA_1_PARAM 0x08001B37
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_tuning_data_1_param_t param_id_haptics_rx_tuning_data_1_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_TUNING_DATA_1_PARAM", PARAM_ID_HAPTICS_RX_TUNING_DATA_1_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 1 to RX module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_tuning_data_1_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for RX module tuning data file for LRA 1}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of RX module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the RX module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {RX module tuning data for LRA 1: path to the RX module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_TUNING_DATA_2_PARAM 0x08001B38
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_tuning_data_2_param_t param_id_haptics_rx_tuning_data_2_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_TUNING_DATA_2_PARAM", PARAM_ID_HAPTICS_RX_TUNING_DATA_2_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 2 to RX module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_tuning_data_2_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for RX module tuning data file for LRA 2}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of RX module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the RX module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {RX module tuning data for LRA 2: path to the RX module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_TUNING_DATA_3_PARAM 0x08001B39
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_tuning_data_3_param_t param_id_haptics_rx_tuning_data_3_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_TUNING_DATA_3_PARAM", PARAM_ID_HAPTICS_RX_TUNING_DATA_3_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 3 to RX module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_tuning_data_3_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for RX module tuning data file for LRA 3}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of RX module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the RX module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {RX module tuning data for LRA 3: path to the RX module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_TUNING_DATA_4_PARAM 0x08001B3A
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_tuning_data_4_param_t param_id_haptics_rx_tuning_data_4_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_TUNING_DATA_4_PARAM", PARAM_ID_HAPTICS_RX_TUNING_DATA_4_PARAM}
+    @h2xmlp_description {Parameter for registering tuning data for LRA source 4 to RX module.}
+    @h2xmlp_toolPolicy  {CALIBRATION}
+    @h2xmlp_isOffloaded {TRUE}
+    @h2xmlp_persistType {Shared}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+struct param_id_haptics_rx_tuning_data_4_param_t {
+    uint32_t alignment;
+    /**< @h2xmle_description {Data Alignment required for RX module tuning data file for LRA 4}
+         @h2xmle_default     {4}
+         @h2xmle_range       {0..4} */
+    uint32_t offset;
+    /**< @h2xmle_description {Data offset (bytes) to align the start address of RX module tuning data file by alignment}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0..3} */
+    uint32_t size;
+    /**< @h2xmle_description {Length of the RX module tuning data file in bytes.}
+         @h2xmle_default     {0}
+         @h2xmle_range       {0x0..0x00002710} */
+#ifdef __H2XML__
+    uint8_t data[0];
+    /**< @h2xmle_description {RX module tuning data for LRA 4: path to the RX module tuning binary file.}
+         @h2xmle_elementType {rawData}
+         @h2xmle_displayType {stringField} */
+#endif
+}
+
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_HAPTICS_RX_VISENSE_CFG 0x08001B3B
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_haptics_rx_visense_t param_id_haptics_rx_visense_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_RX_VISENSE_CFG",
+                          PARAM_ID_HAPTICS_RX_VISENSE_CFG}
+    @h2xmlp_description {VI sense scaling factors.}
     @h2xmlp_toolPolicy  {CALIBRATION;RTC_READONLY}*/
-struct param_id_haptics_cps_param_t {
-   uint16_t limiter_cps_en_flag; // flag that activates the limiter based on the Vbatt/Die Temp values. enable (1)/disable(0)/ LFSNshelf (2)/fullband Attenuation at low die temp (3).
-    /**< @h2xmle_description {Flag to enable/disable limiter based on Vbatt/DieTemp}
-         @h2xmle_rangeList   {"disabled"=0; "enabled"=1; "LFSN bass shelf"=2; "6dB attenuation at low-die-temperature"=3}
-         @h2xmle_default     {0} */
-
-    uint16_t limiter_cps_smooth_VbDT_en_flag; // flag that activates the smoothing operator on the CPS limiter applied to Vbatt/DieTemp. enable (1)/disable(0).
-    /**< @h2xmle_description {Flag that activates the smoothing operator on the CPS limiter applied to Vbatt/DieTemp}
-         @h2xmle_rangeList   {"disabled"=0; "enabled"=1}
-         @h2xmle_default     {0} */
-
-    int32_t limiter_cps_margin_dB_q15; // dB margin about the limiter gain based on the Vbatt/Die Temp values. //{-3dB to 3dB}
-    /**< @h2xmle_description {margin in dB about the limiter gain based on Vbatt/DieTemp}
-         @h2xmle_range       {-98304..98304}
-         @h2xmle_dataFormat  {Q15}
-         @h2xmle_default     {0} */
-
-    int32_t FourOhmTable_GaindB_q24[NDTEMP_DISCRETE * NVBATT_DISCRETE]; //{-9dB to 21dB}
-    /**< @h2xmle_description {dB limiter gain based on Vbatt/DieTemp}
-         @h2xmle_range       {-150994944..352321536}
+struct param_id_haptics_rx_visense_t {
+    int32_t vsens_scale_q24[HAPTICS_MAX_OUT_CHAN]; // Vsense scaling constant
+    /**< @h2xmle_description {conversion factor from Vsens digital to Volts. Default = 10.48, Range: 0 to 128}
+         @h2xmle_range       {0..2147483647}
          @h2xmle_dataFormat  {Q24}
-         @h2xmle_defaultList {87957284, 145160240, 182997767, 208430505, 224969010, 234336959, 241033466, 248013865, 258466387 ,
-                              96345315, 146927405, 179807256, 204401083, 222645856, 232538085, 239263352, 246466665, 257400953 ,
-                              98337475, 148804126, 179087191, 203656859, 222108631, 231110311, 237806715, 245198765, 255964387 ,
-                              102093727, 148992938, 179386013, 204682610, 222412168, 233182257, 239796747, 247518034, 258474781 ,
-                              100497074, 147545543, 179137080, 202742817, 221678763, 232382152, 239230568, 246822093, 257960980 ,
-                              98939648, 146772048, 177599892, 200322399, 220585804, 231500277, 238494521, 246198952, 257136417 ,
-                              98110371, 146303979, 176470616, 198318790, 219790881, 230656796, 237728650, 245389860, 256664702 ,
-                              97501276, 145832883, 175192064, 195863174, 218552965, 229591644, 236012564, 244551363, 255659686 ,
-                              96655369, 141783924, 171465788, 193935057, 213768215, 225221153, 232406164, 240272409, 251504216 ,
-                              92271938, 141156696, 169869275, 192703548, 212957583, 224018994, 231439482, 239350704, 250770897 ,
-                              91942616, 140608696, 168928732, 188922598, 207911551, 219332715, 226416832, 234383703, 244459859 ,
-                              91445824, 140141763, 167186916, 182903110, 198834397, 208079360, 215620297, 221845464, 232310071 ,
-                              90694227, 131756483, 153490021, 170405342, 182045613, 193833222, 198758240, 207253379, 215590064 ,
-                              67804993, 89764953, 101008905, 109784916, 128232558, 146655312, 150041338, 158457898, 168526017} */
-
-    int32_t SixOhmTable_GaindB_q24[NDTEMP_DISCRETE * NVBATT_DISCRETE]; //{-9dB to 21dB}
-    /**< @h2xmle_description {dB limiter gain based on Vbatt/DieTemp}
-         @h2xmle_range       {-150994944..352321536}
+         @h2xmle_default     {175849472} */
+    int32_t isens_scale_q24[HAPTICS_MAX_OUT_CHAN]; // Isense scaling constant
+    /**< @h2xmle_description {conversion factor from Isens digital to Amperes. Default = 6.90, Range: 0 to 128}
+         @h2xmle_range       {0..2147483647}
          @h2xmle_dataFormat  {Q24}
-         @h2xmle_defaultList {89849924, 149275242, 194674168, 219954833, 243852008, 256802244, 264183472, 272200598, 283873525 ,
-                              90610235, 152634064, 195605043, 218943883, 242922824, 256129264, 263751468, 271192540, 283284770 ,
-                              98714416, 155999165, 196376710, 218313035, 241997424, 255554923, 263281537, 270959549, 282907615 ,
-                              115736183, 162343315, 203003860, 226858582, 249176922, 260150809, 265852197, 267193712, 286250923 ,
-                              107421600, 161823373, 201972257, 227785304, 248328084, 259508191, 266621799, 274287373, 285507598 ,
-                              107321445, 161538196, 201175036, 226351642, 247043358, 258357179, 265555775, 273379830, 284659994 ,
-                              104146328, 160675908, 199779694, 225346898, 246079652, 257456299, 264740120, 272730509, 284006672 ,
-                              102344545, 160482894, 198929480, 223823444, 244784686, 256375881, 263751468, 271740302, 283248934 ,
-                              98601538, 159656835, 197924860, 222350184, 243559047, 255371225, 262784826, 270885259, 282247403 ,
-                              93936744, 158623307, 197169500, 221141338, 242139349, 254165764, 261841261, 269858708, 281498590 ,
-                              93088791, 157976078, 196935497, 217654634, 237639330, 250298233, 258634080, 267894051, 280565567 ,
-                              91736031, 156409082, 195634874, 213106354, 229021742, 240771745, 249248405, 255894853, 268456103 ,
-                              91487353, 155224299, 183668665, 195395882, 210429568, 222143188, 228851789, 237236031, 248933354 ,
-                              67689977, 114656719, 131349228, 156511202, 173298732, 184957684, 184992208, 189929407, 198357109} */
-
-    int32_t EightOhmTable_GaindB_q24[NDTEMP_DISCRETE * NVBATT_DISCRETE]; //{-9dB to 21dB}
-    /**< @h2xmle_description {dB limiter gain based on Vbatt/DieTemp}
-         @h2xmle_range       {-150994944..352321536}
-         @h2xmle_dataFormat  {Q24}
-         @h2xmle_defaultList {129574081, 189746403, 224609194, 250957246, 269937637, 281013554, 288009598, 294330810, 296054847 ,
-                              124476722, 186709107, 223722091, 249907498, 269216934, 280096097, 287221887, 293919156, 296255019 ,
-                              121237854, 181877700, 223070073, 249052852, 268195821, 279532482, 286425567, 293401296, 296374858 ,
-                              151513358, 198701071, 233714750, 252522263, 271118487, 281516945, 288500406, 294903245, 295874221 ,
-                              151148131, 198357109, 232884737, 251439536, 270252502, 280779091, 287729249, 294699320, 295763617 ,
-                              150928113, 197973014, 231561021, 250415515, 269260378, 279996216, 287006602, 294094393, 295703217 ,
-                              150486075, 197509412, 230533738, 249357876, 268401192, 279129020, 286288177, 293608882, 295652846 ,
-                              149892487, 196925731, 229466772, 248168727, 267294173, 278392002, 285365562, 293088805, 295531812 ,
-                              149294023, 196376710, 228256990, 246979506, 266260645, 277518309, 284642413, 292670053, 295187786 ,
-                              148690603, 195863174, 227052623, 245850446, 265074379, 276516165, 283840941, 292047969, 294893063 ,
-                              148158480, 195065984, 225775444, 242521693, 260942135, 273533581, 281013554, 289384403, 294586917 ,
-                              147468562, 193853601, 218857194, 237303403, 254054370, 265776306, 273301120, 280791450, 294238390 ,
-                              146927405, 193198652, 210340251, 227155901, 242270515, 252339879, 257332778, 263961952, 273982721 ,
-                              145596188, 171742307, 181588944, 201689189, 218567481, 221859339, 228586628, 235208461, 240229295} */
+         @h2xmle_default     {115859456} */
 }
 
 #include "spf_end_pragma.h"
@@ -1926,6 +2679,69 @@ struct param_id_haptics_wave_designer_state
          @h2xmle_default     {0} */
 }
 
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+#define PARAM_ID_HAPTICS_LPASS_SWR_HW_REG_CFG \
+  0x08001AE1  // we get hardware register addresses
+
+/* LPASS SWR HW register dependent sub structure payload */
+
+typedef struct pkd_reg_addr_t pkd_reg_addr_t;
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct haptics_pkd_reg_addr_t {
+  uint32_t ab_initialize_pkd_reg_addr;
+  /**< @h2xmle_description {Per channel write initialized value to register
+   * address .} */
+  uint32_t ab_trigger_pkd_reg_addr;
+  /**< @h2xmle_description {Per channel write values to register to trigger
+   * autobraking.} */
+  uint32_t ab_stop_pkd_reg_addr;
+  /**< @h2xmle_description {Per channel write values to register to stop
+   * autobraking} */
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+/* LPASS SWR HW register structure payload */
+typedef struct param_id_haptics_lpass_swr_hw_reg_cfg_t
+    param_id_haptics_lpass_swr_hw_reg_cfg_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_HAPTICS_LPASS_SWR_HW_REG_CFG",
+                          PARAM_ID_HAPTICS_LPASS_SWR_HW_REG_CFG}
+    @h2xmlp_description {PMIC autobraking register details.}
+    @h2xmlp_toolPolicy  {NO_SUPPORT}*/
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct param_id_haptics_lpass_swr_hw_reg_cfg_t {
+  uint32_t num_channel;
+  /**< @h2xmle_description {Number of channels.}
+       @h2xmle_rangeList   {"1"=1;"2"=2}
+       @h2xmle_default     {2} */
+
+  uint32_t lpass_wr_cmd_reg_phy_addr;
+  /**< @h2xmle_description {LPASS HW write register physical address.} */
+
+  uint32_t lpass_rd_cmd_reg_phy_addr;
+  /**< @h2xmle_description {LPASS HW read register physical address} */
+
+  uint32_t lpass_rd_fifo_reg_phy_addr;
+  /**< @h2xmle_description {LPASS HW register physical address to read
+   * autobreaking soundwire register values.} */
+
+  haptics_pkd_reg_addr_t haptics_pkd_reg_addr[0];
+  /**< @h2xmle_description {Per channel packed register address written to LPASS
+     RD CMD register.}
+     @h2xmle_variableArraySize  {num_channel} */
+}
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
 ;

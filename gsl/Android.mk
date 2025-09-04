@@ -20,7 +20,8 @@ LOCAL_SRC_FILES := src/gsl_main.c \
     src/gsl_mdf_utils.c\
     src/gsl_datapath.c\
     src/gsl_msg_builder.c\
-    src/gsl_global_persist_cal.c
+    src/gsl_global_persist_cal.c\
+    src/gsl_dls_client.c
 
 LOCAL_HEADER_LIBRARIES := libspf-headers
 LOCAL_SHARED_LIBRARIES := \
@@ -32,11 +33,13 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/api\
     $(LOCAL_PATH)/inc\
     $(LOCAL_PATH)/rtc_api\
-    $(LOCAL_PATH)/hw_rsc_api
+    $(LOCAL_PATH)/hw_rsc_api\
+    $(LOCAL_PATH)/dls_client_api
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/api
 LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH)/rtc_api
 LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH)/hw_rsc_api
+LOCAL_EXPORT_C_INCLUDE_DIRS += $(LOCAL_PATH)/dls_client_api
 
 LOCAL_CFLAGS := -D_ANDROID_
 LOCAL_CFLAGS += -DGSL_DEBUG_ENABLE

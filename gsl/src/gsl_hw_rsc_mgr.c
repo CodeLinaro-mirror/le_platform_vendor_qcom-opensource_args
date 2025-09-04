@@ -155,10 +155,9 @@ static int32_t gsl_command_hw_rsc_config(uint32_t miid,
 		return rc;
 	}
 	cmd_payload_size = sizeof(*cmd_header) + payload.buf_size;
-
 	rc = gsl_allocate_gpr_packet(cmd, GSL_HW_RSC_SRC_PORT,
 		PRM_MODULE_INSTANCE_ID, cmd_payload_size, 0,
-		GPR_IDS_DOMAIN_ID_ADSP_V, &send_pkt);
+		GSL_GPR_DST_DOMAIN_ID, &send_pkt);
 	if (rc) {
 		GSL_ERR("Failed to allocate GPR packet %d", rc);
 		goto free_payload_buf;
@@ -195,10 +194,12 @@ static int32_t gsl_command_hw_rsc_custom_config(const uint8_t *payload,
 	gpr_packet_t *send_pkt = NULL;
 
 	GSL_MUTEX_LOCK(gsl_hw_rsc_ctxt.rsc_lock);
+
 	rc = gsl_allocate_gpr_packet(cmd, GSL_HW_RSC_SRC_PORT,
 		PRM_MODULE_INSTANCE_ID, sizeof(*cmd_header) +
 		GSL_ALIGN_8BYTE(payload_size), 0,
-		GPR_IDS_DOMAIN_ID_ADSP_V, &send_pkt);
+		GSL_GPR_DST_DOMAIN_ID, &send_pkt);
+
 	if (rc) {
 		GSL_ERR("Failed to allocate GPR packet %d", rc);
 		goto exit;

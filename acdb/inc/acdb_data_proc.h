@@ -8,7 +8,7 @@
 *      Processes data for the ACDB SW commands.
 *
 * \copyright
-*  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+*  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 *  SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 *=============================================================================
@@ -61,30 +61,6 @@ struct _acdb_property_t
     /**< The property data */
     uint8_t* property_data;
 };
-
-typedef struct _acdb_proc_domain_module_list_t AcdbProcDomainModuleList;
-#include "acdb_begin_pack.h"
-struct _acdb_proc_domain_module_list_t
-{
-	uint32_t proc_domain_id;
-	uint32_t module_count;
-	AcdbModuleInstance module_list[0];
-}
-#include "acdb_end_pack.h"
-;
-
-typedef struct _acdb_subgraph_proc_domain_module_map_t
-AcdbSubgraphPdmMap;
-#include "acdb_begin_pack.h"
-struct _acdb_subgraph_proc_domain_module_map_t
-{
-	uint32_t subgraph_id;
-	uint32_t proc_count;
-	uint32_t size;
-	AcdbProcDomainModuleList *proc_info;
-}
-#include "acdb_end_pack.h"
-;
 
 typedef struct _acdb_blob_module_info_t AcdbBlobModuleInfo;
 #include "acdb_begin_pack.h"
@@ -180,7 +156,7 @@ typedef struct _acdb_heap_request_t
     uint32_t subgraph_id;
     uint32_t module_iid;
     uint32_t param_id;
-    uint32_t blob_offset; 
+    uint32_t blob_offset;
     AcdbBlob* blob;
     bool_t is_offloaded_param;
     bool_t should_write_iid_pid;
@@ -251,10 +227,10 @@ bool_t DoesSubgraphContainModule(uint32_t subgraph_id, uint32_t module_iid, int3
 
 /**
 * \brief
-*		Retrieves the processor domain ID that a module is associated with. 
+*		Retrieves the processor domain ID that a module is associated with.
 *       The caller should already know that the module instance belongs to the subgraph.
-* \param[in] subgraph_proc_domain_map: a map containing associations between a subgraphs, the 
-*                                      modules in the subgraph and the processors domains that the 
+* \param[in] subgraph_proc_domain_map: a map containing associations between a subgraphs, the
+*                                      modules in the subgraph and the processors domains that the
 *                                      modules run under
 * \param[in] module_iid: the instance id of the module
 * \param[out] proc_domain_id: the processor domain id returned
@@ -266,8 +242,8 @@ int32_t DataProcGetProcDomainForModule(AcdbSubgraphPdmMap* subgraph_proc_domain_
 /**
 * \brief
 * Retrieve a map containing associations between:
-*       1. a subgraph, 
-*       2. the modules in the subgraph and 
+*       1. a subgraph,
+*       2. the modules in the subgraph and
 *       3. the processors domains that the modules run under
 *
 * \param[in] subgraph_id: The subgraph to retrieve the map for

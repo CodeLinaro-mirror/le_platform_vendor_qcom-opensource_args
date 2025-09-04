@@ -9,15 +9,14 @@
 *
 *         This file contains the socket definitions and helper macros used by
 *         AR libraries.
-* 
+*
 *         The APIs defined in this file are based off of winsock2 for windows
 *         and the linux socket apis. For additional information see Winsock2
 *         and Unix socket documenation.
 *
-*  \cond
+*  \copyright
 *      Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *      SPDX-License-Identifier: BSD-3-Clause-Clear
-*  \endcond
 *==============================================================================
 */
 
@@ -87,9 +86,9 @@ int32_t ar_socket_last_error();
 
 /* \brief
  * Checks if a socket is invalid
- * 
+ *
  * \param [in] socket: The socket to verify
- * 
+ *
  * \return True if the socket is invalid, false if its valid
  */
 bool_t ar_socket_is_invalid(
@@ -109,9 +108,9 @@ int32_t ar_socket_deinit();
 
 /* \brief
  *      Closes an opened socket
- * 
+ *
  * \param [in] socket: The socket to close
- * 
+ *
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_close(
@@ -119,45 +118,45 @@ int32_t ar_socket_close(
 
 /* \brief
  *      Establishes a connection to the provided socket
- * 
+ *
  * \param [in] socket: The unconnected socket
  * \param [in] addr: A pointer to a ar_socket_addr_t strucutre containing the address to establish a connection with
  * \param [in] addr_len: The size of the ar_socket_addr_t structure
- * 
+ *
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_connect(
-    ar_socket_t socket, 
-    ar_socket_addr_t *addr, 
+    ar_socket_t socket,
+    ar_socket_addr_t *addr,
     uint32_t addr_len);
 
 /* \brief
  *      Associates a local address with a socket
- * 
+ *
  * \param [in] socket: The socket to bind to
  * \param [in] addr:  A pointer to a ar_socket_addr_t strucutre containing the address to assign to the unbound socket
  * \param [in] addr_len: The size of the ar_socket_addr_t structure
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_bind(
-    ar_socket_t socket, 
-    ar_socket_addr_t *addr, 
+    ar_socket_t socket,
+    ar_socket_addr_t *addr,
     uint32_t addr_len);
 
 /* \brief
  *      Places the provided socket into a listening state. The socket listens for inomming connections
- * 
+ *
  * \param [in] socket: A bound and unconnected socket
  * \param [in] backlog: The max length of the queue of pending connections
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_listen(
-    ar_socket_t socket, 
+    ar_socket_t socket,
     int32_t backlog);
 
 /* \brief
  *      Allows incomming connection requests on a socket
- * 
+ *
  * \param [in] socket: The socket placed in the listening state using ar_socket_listen
  * \param [out] addr: A pointer to a buffer containg the address of the connecting client
  * \param [in] addr_len: The length of the structure pointed to by addr
@@ -165,8 +164,8 @@ int32_t ar_socket_listen(
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_accept(
-    ar_socket_t socket, 
-    ar_socket_addr_t *addr, 
+    ar_socket_t socket,
+    ar_socket_addr_t *addr,
     ar_socketlen_t *addr_len,
     ar_socket_t *new_socket);
 
@@ -180,15 +179,15 @@ int32_t ar_socket_accept(
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_send(
-    ar_socket_t socket, 
+    ar_socket_t socket,
     const char_t* buf,
     int32_t len,
-    int32_t flags, 
+    int32_t flags,
     int32_t *bytes_sent);
 
 /* \brief
  *      Recieves data from a connected socket or bound connectionless socket
- * 
+ *
  * \param [in] socket: The connected socket
  * \param [in] buf: The recieve buffer containing the incoming data
  * \param [in] len: The length of the recieve buffer
@@ -197,27 +196,27 @@ int32_t ar_socket_send(
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_recv(
-    ar_socket_t socket, 
+    ar_socket_t socket,
     char_t* buf,
     int32_t len,
-    int32_t flags, 
+    int32_t flags,
     int32_t *bytes_read);
 
 /* \brief
  *      Retrieves a socket option
- * 
+ *
  * \param [in] socket: A socket to get options for
  * \param [in] level: the  option level
  * \param [in] opt_name: the name of the option
  * \param [out] opt_val: a pointer to a buffer to write the option value to
  * \param [in/out] opt_val_len: the length of the buffer containing the option value
- * 
+ *
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_get_options(
-    ar_socket_t socket, 
-    int32_t level, 
-    int32_t opt_name, 
+    ar_socket_t socket,
+    int32_t level,
+    int32_t opt_name,
     char_t* opt_val,
     ar_socketlen_t *opt_val_len);
 
@@ -232,15 +231,15 @@ int32_t ar_socket_get_options(
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_set_options(
-    ar_socket_t socket, 
-    int32_t level, 
-    int32_t opt_name, 
+    ar_socket_t socket,
+    int32_t level,
+    int32_t opt_name,
     const char_t* opt_val,
     int32_t opt_val_len);
 
 /* \brief
  *      Creaes an IPv4 Stream based TCP socket
- * 
+ *
  * \param [out] socket: The IPv4 TCP based socket
  * \return AR_EOK on success, non-zero otherwise
  */
@@ -258,7 +257,7 @@ int32_t ar_socket_unix(
 
 /* \brief
  * The converts an IPv4 or IPv6 address from binary format to text. This is the equivalent of inet_ntop.
- * 
+ *
  * \param [in] family: The address family
  * \param [in] addr: The address to convert to a string
  * \param [out] addr_string: The address as a string
@@ -266,9 +265,9 @@ int32_t ar_socket_unix(
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_inet_ntop(
-    int32_t family, 
-    void* addr, 
-    char_t* addr_string, 
+    int32_t family,
+    void* addr,
+    char_t* addr_string,
     size_t addr_string_length);
 
 /* \brief
@@ -286,9 +285,9 @@ int32_t ar_socket_inet_pton(
 
 /* \brief
  *      Converts a ushort port to TCP/IP network byte order (big-endian)
- * 
- * \param [in] port: The port to convert. This port is in host-byte order 
- *                    (big or little endian depending on what the host 
+ *
+ * \param [in] port: The port to convert. This port is in host-byte order
+ *                    (big or little endian depending on what the host
                       supports by default)
  * \return AR_EOK on success, non-zero otherwise
  */
@@ -297,7 +296,7 @@ uint16_t ar_socket_htons(
 
 /* \brief
  *      Retrieves the address of a sockets connected peer
- * 
+ *
  * \param [in] socket: The connected socket
  * \param [out] socket_addr: A to a ar_socket_addr_t structure where the address is written to
  * \param [out] addr_length: A poointer to the length of the ar_socket_addr_t structure
@@ -310,26 +309,26 @@ int32_t ar_socket_get_peer_name(
 
 /* \brief
  *      Retrieves one or more ar_socket_addr_info_t structures that contain internet address.
- * 
- * \param [in] node: A null terminated string containing the host name or address string. 
+ *
+ * \param [in] node: A null terminated string containing the host name or address string.
  *                   This is optional.
  * \param [in] service: A null terminated string containing a service name or string port
  *                      number. This is optional
- * \param [in] hints: A pointer to a ar_socket_addr_info_t structure that contains 
+ * \param [in] hints: A pointer to a ar_socket_addr_info_t structure that contains
  *                    hints about the type of sockets supported by the caller. This is optional
- * \param [out] addr_results: A pointer to a linked list of one or more ar_socket_addr_info_t 
+ * \param [out] addr_results: A pointer to a linked list of one or more ar_socket_addr_info_t
  *                            containing information about the host
  * \return AR_EOK on success, non-zero otherwise
  */
 int32_t ar_socket_get_addr_info(
-    const char_t *node, 
-    const char_t *service, 
-    const ar_socket_addr_info_t *hints, 
+    const char_t *node,
+    const char_t *service,
+    const ar_socket_addr_info_t *hints,
     ar_socket_addr_info_t **addr_results);
 
 /* \brief
  *      Frees the add_results aquired when calling ar_socket_get_addr_info
- * 
+ *
  * \param [out] addr_info: The addr_results linked list from ar_socket_get_addr_info
  * \return AR_EOK on success, non-zero otherwise
  */

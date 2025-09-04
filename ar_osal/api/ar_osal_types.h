@@ -73,7 +73,7 @@ typedef unsigned long long   uint64_t;
       *the I/O manager makes the section pageable.
       *Code that runs at IRQL >= DISPATCH_LEVEL must be memory-resident. That is, this code must be either
       *in a nonpageable segment, or in a pageable segment that is locked in memory. If code that is running
-      *at IRQL >= DISPATCH_LEVEL causes a page fault, a bug check occurs. Drivers can use the PAGED_CODE macro
+      *at IRQL >= DISPATCH_LEVEL causes a page fault, a bug check occurs. Drivers can use the PAGED_CODE macro
       *to verify that pageable functions are called only at appropriate IRQLs.
       */
 

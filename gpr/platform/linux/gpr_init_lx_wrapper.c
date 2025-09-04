@@ -3,7 +3,7 @@
  *
  * This file has implementation platform wrapper for the GPR datalink layer
  *
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #define LOG_TAG "gpr_lx_wrapper"
@@ -90,10 +90,12 @@ GPR_INTERNAL void update_gpr_ipc_table(char *drv_path, uint16_t domain_id,
 GPR_INTERNAL uint32_t gpr_drv_init(void)
 {
    ALOGD("GPR INIT START");
-   uint32_t rc;
+   uint32_t rc, domain_id;
    uint32_t num_packet_pools =
              sizeof(gpr_lx_packet_pool_table)/sizeof(gpr_packet_pool_info_v2_t);
 
+   /* Reset to 0 to avoid wrong value when gpr_drv_init called multiple times due to failure */
+   num_domains = 0;
    memset(&gpr_lx_ipc_dl_table[0], 0, (sizeof(struct ipc_dl_v2_t) * GPR_PL_NUM_TOTAL_DOMAINS_V));
 
    gpr_lx_ipc_dl_table[num_domains].domain_id = GPR_IDS_DOMAIN_ID_APPS_V;
@@ -103,6 +105,29 @@ GPR_INTERNAL uint32_t gpr_drv_init(void)
 
    num_domains++;
 
+/*
+ * ToDo: Update gpr init proc domain for ARE on APPS support to
+ * GPR_IDS_DOMAIN_ID_APPS_V
+ *
+ * Modules and Containers in ACDB file does not support APPS PROC domain by
+ * default and would require updating definitions for each module in ACDB
+ * graph. Due to check in audioreach-engine (SPF) code that matches the
+ * container proc domain and GPR proc domain, and existing container domain
+ * being ADSP for container, initialize GPR with GPR_IDS_DOMAIN_ID_ADSP_V
+ * domain ID instead of GPR_IDS_DOMAIN_ID_APPS_V to support use-cases for
+ * ARE on APPS.
+ * Update gpr init domain ID back to GPR_IDS_DOMAIN_ID_APPS_V once APPS
+ * proc domain is supported for modules and container in ACDB data.
+ */
+#ifdef ARE_ON_APPS
+   gpr_lx_ipc_dl_table[num_domains].domain_id = GPR_IDS_DOMAIN_ID_ADSP_V;
+   gpr_lx_ipc_dl_table[num_domains].init_fn = ipc_dl_local_init;
+   gpr_lx_ipc_dl_table[num_domains].deinit_fn = ipc_dl_local_deinit;
+   gpr_lx_ipc_dl_table[num_domains].supports_shared_mem = TRUE;
+
+   num_domains++;
+   domain_id = GPR_IDS_DOMAIN_ID_ADSP_V;
+#else
    update_gpr_ipc_table("/dev/aud_pasthru_adsp",
                            GPR_IDS_DOMAIN_ID_ADSP_V,
                            TRUE);
@@ -112,8 +137,9 @@ GPR_INTERNAL uint32_t gpr_drv_init(void)
    update_gpr_ipc_table("/dev/gpr_channel",
                            GPR_IDS_DOMAIN_ID_CC_DSP_V,
                            FALSE);
-
-   rc = gpr_drv_internal_init_v2(GPR_IDS_DOMAIN_ID_APPS_V,
+   domain_id = GPR_IDS_DOMAIN_ID_APPS_V;
+#endif
+   rc = gpr_drv_internal_init_v2(domain_id,
                                  num_domains,
                                  gpr_lx_ipc_dl_table,
                                  num_packet_pools,

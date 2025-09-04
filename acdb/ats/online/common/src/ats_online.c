@@ -830,7 +830,7 @@ int32_t ats_onc_set_tag_data(
 * Set tag data to the ACDB SW Heap or the delta file(s).
 * This version alows enabling/disabling persisting the data to the delta file.
 * \sa ats_online_ioctl, ats_onc_set_tag_data
-* 
+*
 * \return 0 on success, non-zero on failure
 */
 int32_t ats_onc_set_tag_data_2(

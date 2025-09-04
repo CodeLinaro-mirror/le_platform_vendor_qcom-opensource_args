@@ -7,10 +7,9 @@
 *
 *         This file contains the socket implementation AR libraries.
 *
-*  \cond
+*  \copyright
 *      Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *      SPDX-License-Identifier: BSD-3-Clause-Clear
-*  \endcond
 *==============================================================================
 */
 
@@ -184,7 +183,7 @@ int32_t ar_socket_tcp(ar_socket_t *s)
 
         AR_SOCKET_ERR(
             "Error[%d]: Encounter error while opening TCP socket."
-            " Socket Error: %d: %s", 
+            " Socket Error: %d: %s",
             AR_EFAILED, AR_SOCKET_LAST_ERROR, ar_socket_last_error_str(AR_SOCKET_LAST_ERROR));
         return AR_EFAILED;
     }
@@ -201,7 +200,7 @@ int32_t ar_socket_unix(ar_socket_t *s)
 
         AR_SOCKET_ERR(
             "Error[%d]: Encounter error while opening TCP socket."
-            " Socket Error: %d: %s", 
+            " Socket Error: %d: %s",
             AR_EFAILED, AR_SOCKET_LAST_ERROR, ar_socket_last_error_str(AR_SOCKET_LAST_ERROR));
         return AR_EFAILED;
     }
@@ -242,8 +241,8 @@ int32_t ar_socket_inet_pton(
 }
 
 int32_t ar_socket_get_peer_name(
-    ar_socket_t socket, 
-    ar_socket_addr_t *socket_addr, 
+    ar_socket_t socket,
+    ar_socket_addr_t *socket_addr,
     ar_socketlen_t *addr_length)
 {
     if (0 == getpeername(socket, socket_addr, addr_length))

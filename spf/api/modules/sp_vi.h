@@ -2,7 +2,7 @@
 #define __SP_VI_H__
 
 /*==============================================================================
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
 
   @file sp_vi.h
@@ -38,8 +38,9 @@
 #define SP_IIR_TDF2_STAGES_MAX 5
 
 /* Maximum number of samples per packet. */
+#define MAX_SAMPLES_IN_PACKET_48k 480
 #define MAX_SAMPLES_IN_PACKET 480
-
+#define MAX_SAMPLES_IN_PACKET_8k  80
 /* Number of numerators per stage in the IIR filter. */
 #define SP_IIR_TDF2_NUM_NUM_PER_STAGE 3
 
@@ -47,7 +48,7 @@
 #define SP_IIR_TDF2_NUM_DEN_PER_STAGE 2
 
 /* Unique Module ID */
-#define MODULE_ID_SPEAKER_PROTECTION_V5_VI 0x070010E3
+#define MODULE_ID_SPEAKER_PROTECTION_V7_VI 0x0702C003
 
 /** @h2xmlm_module       {"MODULE_ID_SPEAKER_PROTECTION_V5_VI",
                           MODULE_ID_SPEAKER_PROTECTION_V5_VI}
@@ -91,8 +92,8 @@ It also supports the following events:
      Supported Input Media Format:\n
 *  - Data Format          : FIXED_POINT\n
 *  - fmt_id               : Don't care\n
-*  - Sample Rates         : 48000\n
-*  - Number of channels   : 2, 4\n
+*  - Sample Rates         : 48000, 8000\n
+*  - Number of channels   : 1 to 8\n
 *  - Channel type         : 1 to 63\n
 *  - Bits per sample      : 16 , 32 \n
 *  - Q format             : 15 for bps = 16 and 27 for bps = 32\n
@@ -108,8 +109,8 @@ It also supports the following events:
      @h2xmlm_supportedContTypes  {APM_CONTAINER_TYPE_GC}
      @h2xmlm_isOffloadable       {false}
      @h2xmlm_stackSize            {VI_STACK_SIZE}
-    @h2xmlm_ctrlDynamicPortIntent  { "SP VI intent id for communicating Vsens and Isens data" = INTENT_ID_SP, maxPorts=
-1 }
+    @h2xmlm_ctrlDynamicPortIntent  { "SP VI intent id for communicating Vsens and Isens data" = INTENT_ID_SP,
+maxPorts= 1 }
      @h2xmlm_ToolPolicy              {Calibration}
 
     @{                   <-- Start of the Module -->
@@ -192,12 +193,14 @@ struct param_id_sp_vi_op_mode_cfg_t
            mode or not. This field is valid only in
            Calibration mode (operation_mode = 1).}
          @h2xmle_rangeList   {disabled=0;enabled=1} */
-
-    uint32_t th_r0t0_selection_flag[0];  // this flag determines which set of R0, T0 values the algorithm will use
-         // (0: use calibrated R0, T0 value, 1: use safe R0, T0 value)
-    /**< @h2xmle_description {Specifies which set of R0, T0 values the algorithm will use. This field is valid only in Normal mode (operation_mode = 0).}
-         @h2xmle_variableArraySize  {num_speakers}
-         @h2xmle_rangeList   {"Use calibrated R0, T0 value"=0;"Use safe R0, T0 value"=1} */
+#ifdef __H2XML__
+   uint32_t th_r0t0_selection_flag[0]; // this flag determines which set of R0, T0 values the algorithm will use
+                                       // (0: use calibrated R0, T0 value, 1: use safe R0, T0 value)
+   /**< @h2xmle_description {Specifies which set of R0, T0 values the algorithm will use. This field is valid only in
+   Normal mode (operation_mode = 0).}
+   @h2xmle_variableArraySize  {num_speakers}
+   @h2xmle_rangeList   {"Use calibrated R0, T0 value"=0;"Use safe R0, T0 value"=1} */
+#endif
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -354,7 +357,7 @@ struct param_id_sp_vi_static_cfg_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SPv5_TH_VI_DYNAMIC_CFG 0x08001535
+#define PARAM_ID_SPv5_TH_VI_DYNAMIC_CFG 0x08001B5C
 
 /*==============================================================================
    Type definitions
@@ -848,7 +851,7 @@ struct param_id_sp_th_vi_v_vali_params_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SPv5_EX_VI_DYNAMIC_CFG 0x08001384
+#define PARAM_ID_SPv5_EX_VI_DYNAMIC_CFG 0x08001B5D
 
 /*==============================================================================
    Type definitions
@@ -900,149 +903,159 @@ typedef struct sp_vi_ex_spkr_param_t sp_vi_ex_spkr_param_t;
 /** @h2xmlp_subStruct */
 struct sp_vi_ex_spkr_param_t
 {
-    int32_t Re_ohm_q24;  // typical resistnace of speaker in ohm
-  /**< @h2xmle_description {DC resistance of voice coil at room temperature or small signal level in Ohm}
+   int32_t Re_ohm_q24; // typical resistnace of speaker in ohm
+   /**< @h2xmle_description {DC resistance of voice coil at room temperature or small signal level in Ohm}
        @h2xmle_range       {33554432..2147483647}
-       @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {134217728} */
-    int32_t Le_mH_q24;
-  /**< @h2xmle_description {Voice coil inductance in mH}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {134217728} */
+   int32_t Le_mH_q24;
+   /**< @h2xmle_description {Voice coil inductance in mH}
        @h2xmle_range       {-2147483647..2147483647.}
-       @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {671088} */
-    int32_t L2_mH_q24;
-  /**< @h2xmle_description {Para-inductance of voice coil in LR2 inductor model in mH}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {671088} */
+   int32_t L2_mH_q24;
+   /**< @h2xmle_description {Para-inductance of voice coil in LR2 inductor model in mH}
        @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {33554} */
-    int32_t R2_ohm_q24;
-  /**< @h2xmle_description {Electrical resistance in LR2 inductor model in Ohm}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {33554} */
+   int32_t R2_ohm_q24;
+   /**< @h2xmle_description {Electrical resistance in LR2 inductor model in Ohm}
        @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {16777216} */
-    int32_t Bl_q24;
-  /**< @h2xmle_description {Force factor (Bl product)}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {16777216} */
+   int32_t Bl_q24;
+   /**< @h2xmle_description {Force factor (Bl product)}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {16777216} */
+   int32_t Mms_gram_q24;
+   /**< @h2xmle_description {Mechanical mass of loudspeaker diaphragm in gram}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2722896} */
+   int32_t Rms_KgSec_q24;
+   /**< @h2xmle_description {Mechanical damping or resistance of loudspeaker in Kg/sec}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {5056765} */
+   int32_t Kms_Nmm_q24;
+   /**< @h2xmle_description {Mechanical stiffness of driver suspension in N/mm}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {68155531} */
+   int32_t Fres_Hz_q20;
+   /**< @h2xmle_description {Resonance frequency in Hz}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q20}
+        @h2xmle_default     {838860800} */
+   int32_t Qms_q24;
+   /**< @h2xmle_description {Mechanical Q-factor}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {50331648} */
+   int32_t Le1_mH_mm_q24;
+   /**< @h2xmle_description {Para-inductance of voice coil}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Le2_mH_mm2_q24;
+   /**< @h2xmle_description {Para-inductance of voice coil}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Le3_mH_mm3_q24;
+   /**< @h2xmle_description {Para-inductance of voice coil}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Le4_mH_mm4_q24;
+   /**< @h2xmle_description {Para-inductance of voice coil}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Kms1_Nmm2_q24;
+   /**< @h2xmle_description {Para-Suspension Stiffness}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Kms2_Nmm3_q24;
+   /**< @h2xmle_description {Para-Suspension Stiffness}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Kms3_Nmm4_q24;
+   /**< @h2xmle_description {Para-Suspension Stiffness}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Kms4_Nmm5_q24;
+   /**< @h2xmle_description {Para-Suspension Stiffness}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Rms1_Kgm_q24;
+   /**< @h2xmle_description {Para-Mechanical damping}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Rms2_Kgsm2_q24;
+   /**< @h2xmle_description {Para-Mechanical damping}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Bl_peak_NA_q24;
+   /**< @h2xmle_description {Force factor (Bl peak)}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Bl_rest_m_q24;
+   /**< @h2xmle_description {Force factor (Bl rest)}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t Bl_var_q24;
+   /**< @h2xmle_description {Force factor (Bl var)}
+       @h2xmle_range       {-2147483647..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2000} */
+   int32_t dc_excursion_max_m_q24;
+   /**< @h2xmle_description {DC Excursion max val}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {1678} */
+   int32_t dc_track_step_size_k_q24;
+   /**< @h2xmle_description {DC step size}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {2} */
+   int32_t Bl_peak_track_step_size_q24;
+   /**< @h2xmle_description {Force Factor step size}
+       @h2xmle_range       {0..2147483647}
+        @h2xmle_dataFormat  {Q24}
+        @h2xmle_default     {0} */
+   int32_t dc_threshold_m_q24;
+   /**< @h2xmle_description {DC threshold for estimated DC offset}
+       @h2xmle_range      {0..2147483647}
+       @h2xmle_dataFormat {Q24}
+       @h2xmle_default    {1678} */
+   int32_t dc_attack_time_ms;
+   /**< @h2xmle_description {attack time for DC Smoothing}
+       @h2xmle_range      {0..1000}
+       @h2xmle_default    {1} */
+   int32_t dc_release_time_ms;
+   /**< @h2xmle_description {release time for DC Smoothing}
+       @h2xmle_range      {0..1000}
+       @h2xmle_default    {10} */
+   int32_t Kms_track_step_size_q24;
+   /**< @h2xmle_description {kms tracking step size}
        @h2xmle_range       {0..2147483647}
        @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {16777216} */
-    int32_t Mms_gram_q24;
-  /**< @h2xmle_description {Mechanical mass of loudspeaker diaphragm in gram}
+       @h2xmle_default     {335544320} */
+   int32_t Kms_max_abs_dev_q24;
+   /**< @h2xmle_description {kms_est maximum absolute deviation from Kms }
        @h2xmle_range       {0..2147483647}
        @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {2722896} */
-    int32_t Rms_KgSec_q24;
-  /**< @h2xmle_description {Mechanical damping or resistance of loudspeaker in Kg/sec}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {5056765} */
-    int32_t Kms_Nmm_q24;
-  /**< @h2xmle_description {Mechanical stiffness of driver suspension in N/mm}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {68155531} */
-    int32_t Fres_Hz_q20;
-  /**< @h2xmle_description {Resonance frequency in Hz}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q20}
-       @h2xmle_default     {838860800} */
-    int32_t Qms_q24;
-  /**< @h2xmle_description {Mechanical Q-factor}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q24}
-       @h2xmle_default     {50331648} */
-    int32_t Le1_mH_mm_q28;
-  /**< @h2xmle_description {Para-inductance of voice coil}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Le2_mH_mm2_q28;
-  /**< @h2xmle_description {Para-inductance of voice coil}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Le3_mH_mm3_q28;
-  /**< @h2xmle_description {Para-inductance of voice coil}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Le4_mH_mm4_q28;
-  /**< @h2xmle_description {Para-inductance of voice coil}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Kms1_Nmm2_q28;
-  /**< @h2xmle_description {Para-Suspension Stiffness}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Kms2_Nmm3_q28;
-  /**< @h2xmle_description {Para-Suspension Stiffness}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Kms3_Nmm4_q28;
-  /**< @h2xmle_description {Para-Suspension Stiffness}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Kms4_Nmm5_q28;
-  /**< @h2xmle_description {Para-Suspension Stiffness}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Rms1_Kgm_q28;
-  /**< @h2xmle_description {Para-Mechanical damping}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Rms2_Kgsm2_q28;
-  /**< @h2xmle_description {Para-Mechanical damping}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Bl_peak_NA_q28;
-  /**< @h2xmle_description {Force factor (Bl peak)}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Bl_rest_m_q28;
-  /**< @h2xmle_description {Force factor (Bl rest)}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t Bl_var_q28;
-  /**< @h2xmle_description {Force factor (Bl var)}
-       @h2xmle_range       {-2147483647..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {32000} */
-    int32_t dc_excursion_max_m_q28;
-  /**< @h2xmle_description {DC Excursion max val}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {26844} */
-    int32_t dc_track_step_size_k_q28;
-  /**< @h2xmle_description {DC step size}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {27} */
-    int32_t Bl_peak_track_step_size_q28;
-  /**< @h2xmle_description {Force Factor step size}
-       @h2xmle_range       {0..2147483647}
-       @h2xmle_dataFormat  {Q28}
-       @h2xmle_default     {0} */
-    int32_t dc_threshold_m_q28;
-  /**< @h2xmle_description {DC threshold for estimated DC offset}
-        @h2xmle_range      {0..2147483647}
-        @h2xmle_dataFormat {Q28}
-        @h2xmle_default    {26843} */
-    int32_t dc_attack_time_ms;
-  /**< @h2xmle_description {attack time for DC Smoothing}
-        @h2xmle_range      {0..1000}
-        @h2xmle_default    {1} */
-    int32_t dc_release_time_ms;
-  /**< @h2xmle_description {release time for DC Smoothing}
-        @h2xmle_range      {0..1000}
-        @h2xmle_default    {10} */
+       @h2xmle_default     {5033164} */
     int32_t amp_gain_q24;
   /**< @h2xmle_description {speaker peak voltage for a digitally
                             full-scale signal}
@@ -1083,6 +1096,7 @@ struct sp_vi_ex_spkr_param_t
   /**< @h2xmle_description {flag for conservative adaptation only for DC resistance}
        @h2xmle_rangeList       {"disabled"=0; "enabled"=1}
        @h2xmle_default     {1} */
+    int32_t negative_DC_comp_en;
     fbsp_tdf_2_cfg_t bandpss_LPfilter_cfg;
   /**< @h2xmle_description {LPF config}  */
     fbsp_tdf_2_cfg_t bandpss_HPfilter_cfg;
@@ -1482,7 +1496,7 @@ struct param_id_vi_output_bps_split_enable_t
    Constants
 ==============================================================================*/
 
-#define PARAM_ID_SPv5_VI_SPKR_DIAG_GETPKT_PARAM 0x08001539
+#define PARAM_ID_SPv5_VI_SPKR_DIAG_GETPKT_PARAM 0x08001B5E
 
 /*==============================================================================
    Type definitions

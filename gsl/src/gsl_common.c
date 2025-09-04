@@ -6,12 +6,13 @@
  *      lowest level module within GSL
  *
  * \copyright
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #include "gsl_common.h"
 #include "ar_osal_error.h"
 #include "ar_osal_mutex.h"
+#include "ar_osal_sys_id.h"
 #include "gpr_api_inline.h"
 #include "apm_api.h"
 #include "ar_util_err_detection.h"
@@ -26,6 +27,7 @@ uint32_t gsl_signal_create(struct gsl_signal *sig_p, ar_osal_mutex_t *lock)
 	sig_p->status = 0;
 	sig_p->gpr_packet = NULL;
 	sig_p->lock = lock;
+	sig_p->expected_packet_token = 0;
 
 	return ar_osal_signal_create(&sig_p->sig);
 }
@@ -44,6 +46,7 @@ uint32_t gsl_signal_destroy(struct gsl_signal *sig_p)
 	if (sig_p->gpr_packet)
 		__gpr_cmd_free(sig_p->gpr_packet);
 	sig_p->gpr_packet = NULL;
+	sig_p->expected_packet_token = 0;
 
 	rc = ar_osal_signal_destroy(sig_p->sig);
 	sig_p->sig = NULL;
@@ -79,6 +82,8 @@ uint32_t gsl_signal_timedwait(struct gsl_signal *sig_p, uint32_t timeout_ms,
 		if (sig_p->lock)
 			GSL_MUTEX_UNLOCK(*sig_p->lock);
 	}
+	// clear gpr packet token
+	sig_p->expected_packet_token = 0;
 	return rc;
 }
 
@@ -97,8 +102,17 @@ uint32_t gsl_signal_set(struct gsl_signal *sig_p, uint32_t ev_flags,
 	/* if there was a pending gpr packet that never got consumed free it */
 	if (sig_p->gpr_packet)
 		__gpr_cmd_free(sig_p->gpr_packet);
+	if (gpr_packet && sig_p->expected_packet_token != ((gpr_packet_t *)gpr_packet)->token) {
+		// there is a delay packet received, just ignore it.
+		GSL_ERR("received a delay packet, opcode[0x%x], token 0x%08x, ignore it.",
+			((gpr_packet_t *)gpr_packet)->opcode, ((gpr_packet_t *)gpr_packet)->token);
+		rc = AR_EUNEXPECTED;
+		goto exit;
+	}
 	sig_p->gpr_packet = gpr_packet;
 	rc = ar_osal_signal_set(sig_p->sig);
+
+exit:
 	if (sig_p->lock)
 		GSL_MUTEX_UNLOCK(*sig_p->lock);
 
@@ -167,6 +181,8 @@ int32_t gsl_send_spf_cmd(gpr_packet_t **packet, struct gsl_signal *sig_p,
         	if(sig_p == NULL)
     	        GSL_VERBOSE("sending pkt opcode 0x%x token 0x%08x", opcode, (*packet)->token);
 	}
+	if (sig_p != NULL)
+		sig_p->expected_packet_token = (*packet)->token;
 
 	rc = __gpr_cmd_async_send(*packet);
 	if (rc) {
@@ -185,6 +201,12 @@ int32_t gsl_send_spf_cmd(gpr_packet_t **packet, struct gsl_signal *sig_p,
 		if (opcode == APM_CMD_GRAPH_OPEN) {
 			rc = gsl_signal_timedwait(sig_p, GSL_GRAPH_OPEN_TIMEOUT_MS,
 				&ev_flags, &spf_status, rsp_pkt);
+		} else if (opcode == APM_CMD_GRAPH_START || opcode == APM_CMD_GRAPH_STOP) {
+			rc = gsl_signal_timedwait(sig_p, GSL_GRAPH_START_STOP_TIMEOUT_MS,
+				&ev_flags, &spf_status, rsp_pkt);
+		} else if (opcode == APM_CMD_GRAPH_PREPARE) {
+			rc = gsl_signal_timedwait(sig_p, GSL_GRAPH_PREPARE_TIMEOUT_MS, &ev_flags,
+				&spf_status, rsp_pkt);
 		} else {
 			rc = gsl_signal_timedwait(sig_p, GSL_SPF_TIMEOUT_MS, &ev_flags,
 				&spf_status, rsp_pkt);
@@ -265,5 +287,79 @@ int32_t gsl_send_spf_cmd_wait_for_basic_rsp(gpr_packet_t **packet,
 	if (rsp)
 		__gpr_cmd_free(rsp);
 
+	return rc;
+}
+
+int32_t gsl_send_spf_satellite_info(uint32_t proc_id,
+	uint32_t supported_ss_mask, uint32_t src_port, struct gsl_signal *sig_p)
+{
+	uint32_t i = 0, j = 0;
+	gpr_cmd_alloc_ext_t gpr_args;
+	int32_t rc = AR_EOK;
+	gpr_packet_t *send_pkt = NULL;
+	apm_cmd_header_t *apm_hdr;
+	apm_param_id_satellite_pd_info_t *sat_pd_info;
+	apm_module_param_data_t *param_hdr;
+
+	if (supported_ss_mask == (uint32_t) GSL_GET_SPF_SS_MASK(proc_id))
+		return AR_EOK;
+
+	gpr_args.src_domain_id = GPR_IDS_DOMAIN_ID_APPS_V;
+	gpr_args.dst_domain_id = (uint8_t) proc_id;
+	gpr_args.src_port = src_port;
+	gpr_args.dst_port = APM_MODULE_INSTANCE_ID;
+	gpr_args.opcode = APM_CMD_SET_CFG;
+	gpr_args.token = 0;
+	gpr_args.client_data = 0;
+	gpr_args.ret_packet = &send_pkt;
+	/* below allocate for worst case since payload size is small enough */
+	gpr_args.payload_size = sizeof(apm_cmd_header_t)
+		+ sizeof(apm_module_param_data_t)
+		+ sizeof(apm_param_id_satellite_pd_info_t)
+		+ ((AR_SUB_SYS_ID_LAST + 1) * sizeof(uint32_t));
+
+	rc = __gpr_cmd_alloc_ext(&gpr_args);
+	if (rc) {
+		GSL_ERR("Failed to allocate gpr pkt %d", rc);
+		goto exit;
+	}
+
+	apm_hdr = GPR_PKT_GET_PAYLOAD(apm_cmd_header_t, send_pkt);
+	apm_hdr->mem_map_handle = 0;
+	apm_hdr->payload_address_lsw = 0;
+	apm_hdr->payload_address_msw = 0;
+	apm_hdr->payload_size = sizeof(apm_module_param_data_t)
+		+ sizeof(apm_param_id_satellite_pd_info_t)
+		+ ((AR_SUB_SYS_ID_LAST + 1) * sizeof(uint32_t));
+
+	param_hdr = (apm_module_param_data_t *)(apm_hdr + 1);
+	param_hdr->module_instance_id = APM_MODULE_INSTANCE_ID;
+	param_hdr->param_id = APM_PARAM_ID_SATELLITE_PD_INFO;
+	param_hdr->param_size = sizeof(apm_param_id_satellite_pd_info_t)
+		+ ((AR_SUB_SYS_ID_LAST + 1) * sizeof(uint32_t));
+	param_hdr->error_code = 0;
+
+	sat_pd_info = (apm_param_id_satellite_pd_info_t *)(param_hdr + 1);
+
+	/*
+	 * disable ADSP from the bitmask for now as we assume master is on
+	 * ADSP. This can be revisited in the future once we add support for
+	 * multiple masters
+	 */
+	supported_ss_mask &= ~proc_id;
+	for (i = AR_SUB_SYS_ID_FIRST; i <= AR_SUB_SYS_ID_LAST; ++i) {
+		if (GSL_TEST_SPF_SS_BIT(supported_ss_mask, i))
+			sat_pd_info->proc_domain_id_list[j++] = i;
+	}
+
+	sat_pd_info->num_proc_domain_ids = j;
+	if (sat_pd_info->num_proc_domain_ids > 0) {
+		GSL_LOG_PKT("send_pkt", src_port, send_pkt, sizeof(*send_pkt)
+			+ gpr_args.payload_size, NULL, 0);
+		rc = gsl_send_spf_cmd_wait_for_basic_rsp(&send_pkt, sig_p);
+		if (rc)
+			GSL_ERR("failed to send spf satellite info rc %d", rc);
+	}
+exit:
 	return rc;
 }

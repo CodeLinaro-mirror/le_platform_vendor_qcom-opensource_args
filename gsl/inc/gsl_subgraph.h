@@ -6,7 +6,7 @@
  * \brief
  *      Represents a single sub-graph
  *
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #include "ar_util_list.h"
@@ -15,6 +15,7 @@
 #include "gsl_subgraph_driver_props.h"
 #include "gsl_subgraph_driver_props_generic.h"
 #include "acdb.h"
+#include "ar_osal_sys_id.h"
 
 struct gsl_child_sg {
 	struct ar_list_node_t node; /**< list node for subgraph children */
@@ -29,9 +30,9 @@ struct gsl_subgraph {
 	uint32_t open_ref_cnt;
 	uint32_t start_ref_cnt;
 	uint32_t stop_ref_cnt;
+	uint32_t num_proc_ids;
 	/*  below shmem pointer points to data of type AcdbSgIdPersistData */
-	struct gsl_shmem_alloc_data persist_cal_data;
-	uint32_t persist_cal_data_size;
+	struct gsl_shmem_alloc_data_per_proc persist_cal_data_per_proc[AR_SUB_SYS_ID_LAST];
 	/*  below shmem pointer points to data of type AcdbSgIdPersistData */
 	struct gsl_shmem_alloc_data user_persist_cfg_data;
 	uint32_t user_persist_cfg_data_size;
@@ -115,7 +116,7 @@ uint32_t gsl_subgraph_remove_children(struct gsl_subgraph *sg,
  */
 int32_t gsl_subgraph_query_persist_cal_by_mem(struct gsl_subgraph *sg_obj,
 	const struct gsl_key_vector *ckv, const	AcdbHwAccelMemType mem_type,
-	uint32_t master_proc);
+	uint32_t master_proc, uint32_t persist_cal_idx);
 
 /**
  * \brief Copy perstent data provided by caller into this subgraphs shared
@@ -130,7 +131,7 @@ int32_t gsl_subgraph_query_persist_cal_by_mem(struct gsl_subgraph *sg_obj,
  */
 int32_t gsl_subgraph_set_persist_cal(struct gsl_subgraph *sg,
 	uint8_t *persistent_cal, uint32_t persistent_cal_sz,
-	uint32_t master_proc);
+	uint32_t master_proc, uint32_t persist_cal_idx);
 
 /**
  * \brief Checks if the given subgraph matches at least one of the property

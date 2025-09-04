@@ -64,7 +64,7 @@ void CreateEventsAndThreads(void)
 	}
 }
 
-void WriteToBuffer(VOID)
+void WriteToBuffer(void)
 {
 	int32_t status = AR_EOK;
 

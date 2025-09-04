@@ -234,8 +234,10 @@ void *receiver_thread_loop(void *priv_data)
            /**
             * Continue polling if poll error is EINTR
             */
-            if (error == EINTR)
+            if (error == EINTR) {
+                AR_LOG_INFO(LOG_TAG,"%s:%d Poll interrupted due to EINTR", __func__, __LINE__);
                 continue;
+            }
 
             AR_LOG_ERR(LOG_TAG,"Poll failed error %s", strerror(error));
             break;
@@ -279,6 +281,7 @@ void *receiver_thread_loop(void *priv_data)
             AR_LOG_INFO(LOG_TAG,"%s:%d Poll errored", __func__, __LINE__);
             continue;
         } else if (pfd[1].revents & (POLLIN|POLLPRI)) {
+            AR_LOG_ERR(LOG_TAG,"%s:%d unexpected poll!", __func__, __LINE__);
             break;
         }
     }
@@ -365,6 +368,7 @@ static gpr_dl_lx_port_t * gpr_dl_lx_local_init(uint32_t src_domain_id, uint32_t 
         free(dl_lx_port);
         return NULL;
     }
+    pthread_setname_np(dl_lx_port->receiver_thread, "gpr_receiver_thread");
     return dl_lx_port;
 }
 

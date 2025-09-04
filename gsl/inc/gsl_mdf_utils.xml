@@ -20,6 +20,18 @@
             description="Number of processor group."/>
           <CONFIG_ELEMENT name="shmem_info" type="per_group_shmem_info_t" byteSize="0x0" byteOffset="0x4" arrayElements="0" variableArraySize="num_proc_groups"/>
         </PARAMETER>
+        <PARAMETER isSubStruct="true" name="proc_domain_type_t" maxSize="0x0">
+          <CONFIG_ELEMENT description="Processor id" name="proc_id" type="uint32_t" typeUnSigned="true" byteSize="0x4" byteOffset="0x0" min="0x0"
+            max="0xffffffff" default="0x2"/>
+          <CONFIG_ELEMENT description="Proc domain type, 1: static 2: dynamic" name="type" type="uint32_t" typeUnSigned="true" byteSize="0x4" byteOffset="0x4"
+            min="0x0" max="0xffffffff" default="0x1"/>
+        </PARAMETER>
+        <PARAMETER name="PARAM_ID_PROC_DOMAIN_INFO" pid="0x2" maxSize="0x0" description="Used to identify processor domain info">
+          <DEFAULT_DEPENDENCIES/>
+          <CONFIG_ELEMENT name="num_procs" type="uint32_t" typeUnSigned="true" byteSize="0x4" byteOffset="0x0" min="0x0" max="0xffffffff" default="0x1"
+            description="Number of processors."/>
+          <CONFIG_ELEMENT name="domain_type" type="proc_domain_type_t" byteSize="0x0" byteOffset="0x4" arrayElements="0" variableArraySize="num_procs"/>
+        </PARAMETER>
       </PARAMETER_LIST>
     </MODULE>
   </MODULE_LIST>

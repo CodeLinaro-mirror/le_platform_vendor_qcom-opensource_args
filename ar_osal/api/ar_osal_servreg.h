@@ -80,8 +80,8 @@ typedef struct ar_osal_servreg_state_notify_payload {
 /**
 * \brief ar_osal_servreg_init
 *        Initialize servreg interface.
-*........Note:This API has to be called before any other API in this interface.
-*........Should be called at least once and is expected to be serialized if called
+*        Note:This API has to be called before any other API in this interface.
+*        Should be called at least once and is expected to be serialized if called
 *        multiple times.
 * \return
 *  0 -- Success
@@ -92,8 +92,8 @@ int32_t ar_osal_servreg_init(void);
 /**
 * \brief ar_osal_servreg_deinit
 *        Uninitialize servreg interface.
-*........Should be called in pair with ar_osal_servreg_init() and
-*........should be a serialized call.
+*        Should be called in pair with ar_osal_servreg_init() and
+*        should be a serialized call.
 * \return
 *  0 -- Success
 *  Nonzero -- Failure

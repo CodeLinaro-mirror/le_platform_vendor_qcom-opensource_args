@@ -6,7 +6,7 @@
  * \brief
  *      Multi-DSP framework utilities library
  *
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -15,6 +15,7 @@
   * @h2xml_title_date {08/01/2018}
   */
  #include "ar_osal_types.h"
+ #include "gsl_common.h"
 
 #define GSL_MULTI_DSP_FWK_DATA_MID 0x2005
 
@@ -25,11 +26,12 @@
   *
   * -  This module supports the following parameter IDs: \n
   * - #PARAM_ID_PROC_GROUP_INFO_PARAMS \n
+  * - #PARAM_ID_PROC_DOMAIN_INFO \n
   *
   * @{                   <-- Start of the Module -->
   */
 #define PARAM_ID_PROC_GROUP_INFO_PARAMS 0x0001
-
+#define PARAM_ID_PROC_DOMAIN_INFO 0x0002
 
 /** @h2xmle_description {Shared memory info of each group}
  * @h2xmlp_subStruct
@@ -66,7 +68,6 @@ typedef struct per_group_shmem_info_t per_group_shmem_info_t;
  *   PARAM_ID_PROC_GROUP_INFO_PARAMS}
  * @h2xmlp_description {Used to configure processor group info}
  */
-
 struct proc_group_info_params_t {
 	/** @h2xmle_description  {Number of processor group.}
 	 * @h2xmle_default      {1}
@@ -81,10 +82,53 @@ struct proc_group_info_params_t {
 #endif
 };
 
+typedef struct proc_group_info_params_t proc_group_info_params_t;
+
+/** @h2xmle_description {Processor domain type for each processor}
+ * @h2xmlp_subStruct
+ */
+struct proc_domain_type {
+	/** @h2xmle_description {Processor id}
+	 * @h2xmle_default      {2}
+	 */
+	uint32_t proc_id;
+	/** @h2xmle_description {Proc domain type, 1: static 2: dynamic}
+	 * @h2xmle_default      {1}
+	 */
+	uint32_t proc_type;
+};
+
+typedef struct proc_domain_type proc_domain_type_t;
+
+/**
+ * @h2xmlp_parameter   {"PARAM_ID_PROC_DOMAIN_INFO",
+ *   PARAM_ID_PROC_DOMAIN_INFO}
+ * @h2xmlp_description {Used to identify processor domain type}
+ */
+struct proc_domain_info {
+	/** @h2xmle_description {Number of processors}
+	 * @h2xmle_default      {1}
+	 */
+	uint32_t num_procs;
+	/**
+	 * @h2xmle_variableArraySize {num_procs}
+	 */
+	proc_domain_type_t domain_type[];
+};
 /**
  * @}
  */
-typedef struct proc_group_info_params_t proc_group_info_params_t;
+
+/*
+ * \brief Returns all proc domain ids
+ *  Returns number of SPF processors and fills proc_domain_type
+ *  array with SPF proc domain id and type
+ *
+ * \param[out] proc_domains: SPF processors domain info.
+ * \param[out] num_procs: number of SPF processors.
+ */
+int32_t gsl_mdf_utils_get_proc_domain_info(
+	proc_domain_type_t **proc_domains, uint32_t *num_procs);
 
 /*
  * \brief Returns all master proc ids
@@ -156,6 +200,48 @@ int32_t gsl_mdf_utils_shmem_alloc(uint32_t ss_mask, uint32_t master_proc);
  * have been restarted
  */
 void gsl_mdf_utils_notify_ss_restarted(uint32_t restarted_ss_mask);
+
+/*
+ * \brief frees or unmap the mdf shmem for all ss groups.
+ *
+ *  \param[in] ss_mask: mask representing the set of subsystems for which to
+ * de-allocate or un map the shared loaned memory
+ */
+int32_t gsl_mdf_utils_shmem_free(uint32_t ss_mask);
+
+/*
+ * \brief Creates dynamic PD and allocates shared memory for given
+ * subsystems
+ *
+ * \param[in] ss_mask: mask representing the subsystems
+ * \param[in] master_proc_id: Master proc id
+ */
+int32_t gsl_mdf_utils_register_dynamic_pd(uint32_t ss_mask,
+	uint32_t master_proc_id, uint32_t src_port,
+	struct gsl_signal *sig, uint32_t *dyn_ss_mask);
+
+/*
+ * \brief Releases dynamic PD and deallocates shared memory for given
+ * subsystems
+ * \param[in] ss_mask: mask representing the subsystems
+ * \param[in] master_proc_id: Master proc id
+ */
+int32_t gsl_mdf_utils_deregister_dynamic_pd(uint32_t ss_mask,
+	uint32_t master_proc_id);
+
+/*
+ * \brief Check if the given subsystem is of dynamic PD type
+ * \param[in] sys_id: proc id
+ * \return TRUE if dynamic PD, FALSE otherwise.
+ */
+bool_t gsl_mdf_utils_is_dynamic_pd(uint32_t proc_id);
+
+/*
+ * \brief Check if dynamic PD is active for a given subsystem
+ * \param[in] sys_id: proc id
+ * \return TRUE if pending, FALSE otherwise.
+ */
+bool_t gsl_mdf_utils_get_dynamic_pd_state(uint32_t proc_id);
 
 /*
  * \brief initialize MDF utils, internally queries ACDB to get supported SS info

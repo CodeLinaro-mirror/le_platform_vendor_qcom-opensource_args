@@ -45,8 +45,10 @@ LOCAL_SRC_FILES := src/linux/ar_osal_mutex.c \
 LOCAL_SRC_FILES += src/linux/qcom/ar_osal_log_pkt_op.c \
                    src/linux/qcom/ar_osal_servreg.c
 
+LOCAL_SRC_FILES += src/linux/qcom/dyn_pd/ar_osal_dyn_pd.c
+
 ifeq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION), 4.14 4.19 5.4))
-LOCAL_SRC_FILES += src/linux/qcom/ar_osal_shmem.c
+LOCAL_SRC_FILES += src/linux/qcom/ar_osal_shmem_ion.c
 else
 LOCAL_SRC_FILES += src/linux/qcom/ar_osal_shmem_db.c
 endif
@@ -63,6 +65,13 @@ ifneq ($(strip $(AUDIO_FEATURE_OLD_ION_IMPL)), true)
         include $(LIBION_HEADER_PATH_WRAPPER)
         LOCAL_C_INCLUDES += $(LIBION_HEADER_PATHS)
         LOCAL_SHARED_LIBRARIES += libion
+endif
+
+ifeq ($(TARGET_AUDIO_DYNAMIC_PD_ENABLED), true)
+    LOCAL_HEADER_LIBRARIES += libfastrpc_vendor_headers
+    LOCAL_SHARED_LIBRARIES += libcdsprpc
+    LOCAL_SRC_FILES += src/linux/qcom/dyn_pd/cdsp_dyn_pd_stub.c
+    LOCAL_CFLAGS += -DAR_OSAL_USE_DYNAMIC_PD
 endif
 
 ifeq ($(TARGET_PD_SERVICE_ENABLED), true)

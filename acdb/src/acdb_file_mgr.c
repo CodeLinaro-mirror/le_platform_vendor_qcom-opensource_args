@@ -880,6 +880,7 @@ int32_t AcdbFileManQwspFileIO(
         break;
     case ACDB_FM_FILE_OP_CLOSE:
         status = ar_fclose(ws_info->file_handle);
+        ws_info->file_handle = NULL;
         if (AR_FAILED(status))
         {
             ACDB_ERR("Error[%d]: Failed to close the workspace file", status);
@@ -978,6 +979,7 @@ int32_t AcdbFileManWriteLoadedFileInfo(
     AcdbFileManBlob *rsp, uint32_t *blob_offset)
 {
     int32_t status = AR_EOK;
+    uint32_t path_info_struct_size = 0;
     acdb_buffer_t path_info_struct = { 0 };
     acdb_path_t db_file = { 0 };
     AcdbFileManDbPathInfoV2 db_path_info_v2 = { 0 };
@@ -992,9 +994,11 @@ int32_t AcdbFileManWriteLoadedFileInfo(
     {
     case ACDB_FM_DB_PATH_INFO_VERSION_1:
         path_info_struct.buffer = (void*)&db_path_info_v1;
+        path_info_struct_size = sizeof(db_path_info_v1) - sizeof(intptr_t);
         break;
     case ACDB_FM_DB_PATH_INFO_VERSION_2:
         path_info_struct.buffer = (void*)&db_path_info_v2;
+        path_info_struct_size = sizeof(db_path_info_v2) - sizeof(size_t);
         break;
     default:
         status = AR_EBADPARAM;

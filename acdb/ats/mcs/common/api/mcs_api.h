@@ -39,10 +39,10 @@ typedef enum mcs_api_minor_version_t
 {
     /**< Initial version */
     MCS_API_MINOR_VERSION_0 = 0x0,
-    /**< Added support for MCS v2 APIs: 
-    1. MCS_CMD_PLAY_2 
-    2. MCS_CMD_REC_2 
-    3. MCS_CMD_MULTI_PLAY_REC 
+    /**< Added support for MCS v2 APIs:
+    1. MCS_CMD_PLAY_2
+    2. MCS_CMD_REC_2
+    3. MCS_CMD_MULTI_PLAY_REC
     4. MCS_CMD_STOP_2 */
     MCS_API_MINOR_VERSION_1 = 0x1,
 }mcs_api_minor_version_t;
@@ -53,8 +53,8 @@ typedef enum mcs_command_t
     MCS_CMD_UNKNOWN                 = 0x00,
 
     /**<
-    * The command for triggering a playback usecase with a path to the playback 
-    * file for a specified duration. 
+    * The command for triggering a playback usecase with a path to the playback
+    * file for a specified duration.
     *
     * \param[in] cmd:           this command ID
     * \param[in] cmd_buf:       A pointer to mcs_play_t
@@ -66,8 +66,8 @@ typedef enum mcs_command_t
     */
     MCS_CMD_PLAY                    = 0x01,
     /**<
-    * The command for triggering a capture usecase with a path to the file 
-    * to write to for a specified duration. 
+    * The command for triggering a capture usecase with a path to the file
+    * to write to for a specified duration.
     *
     * \param[in] cmd:           this command ID
     * \param[in] cmd_buf:       A pointer to mcs_rec_t
@@ -80,7 +80,7 @@ typedef enum mcs_command_t
     MCS_CMD_REC                     = 0x02,
     /**<
     * The command for triggering a simultaneous playback + record session.
-    * This command combines the structures used in MCS_CMD_PLAY and 
+    * This command combines the structures used in MCS_CMD_PLAY and
     * MCS_CMD_REC.
     *
     * \param[in] cmd:           this command ID
@@ -105,8 +105,8 @@ typedef enum mcs_command_t
     */
     MCS_CMD_STOP                    = 0x04,
     /**<
-    * The command for triggering a playback usecase with a path to the playback 
-    * file for a specified duration. 
+    * The command for triggering a playback usecase with a path to the playback
+    * file for a specified duration.
     * Calibration and tag data can be configured here unlike MCS_CMD_PLAY
     *
     * \param[in] cmd:           this command ID
@@ -119,8 +119,8 @@ typedef enum mcs_command_t
     */
     MCS_CMD_PLAY_2                  = 0x05,
     /**<
-    * The command for triggering a capture usecase with a path to the file 
-    * to write to for a specified duration. 
+    * The command for triggering a capture usecase with a path to the file
+    * to write to for a specified duration.
     * Calibration and tag data can be configured here unlike MCS_CMD_REC
     *
     * \param[in] cmd:           this command ID
@@ -145,9 +145,9 @@ typedef enum mcs_command_t
     */
     MCS_CMD_STOP_2                  = 0x07,
     /**<
-    * The command for triggering multiple simultaneous playback + record 
+    * The command for triggering multiple simultaneous playback + record
     * sessions.
-    * This command combines the structures used in MCS_CMD_PLAY_2 and 
+    * This command combines the structures used in MCS_CMD_PLAY_2 and
     * MCS_CMD_REC_2 and contains arrays of playback and record usecases.
     *
     * \param[in] cmd:           this command ID
@@ -384,7 +384,7 @@ typedef struct mcs_record_2_t
     uint8_t* tag_data;
 }mcs_record_2_t;
 
-/**< Holds pointers to a playback and record session configurations. The  
+/**< Holds pointers to a playback and record session configurations. The
 * pointers can be null to indicate no configuration is provided. */
 typedef struct mcs_multi_play_rec_session_t
 {

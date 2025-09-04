@@ -86,7 +86,8 @@ LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/ats/transports/common/api/ \
     $(LOCAL_PATH)/ats/transports/common/inc/ \
     $(LOCAL_PATH)/ats/transports/tcpip_server/inc/ \
-    $(LOCAL_PATH)/ats/transports/tcpip_server/api/
+    $(LOCAL_PATH)/ats/transports/tcpip_server/api/ \
+    $(LOCAL_PATH)/ats/dls/common/inc
 
 LOCAL_SRC_FILES := \
     ats/src/ats.c \
@@ -103,8 +104,9 @@ LOCAL_SRC_FILES := \
     ats/sockets/linux/src/ar_sockets.cpp \
     ats/transports/common/src/ats_transport.c \
     ats/transports/tcpip_server/src/tcpip_cmd_server.cpp \
-    ats/transports/tcpip_server/src/tcpip_rtm_server.cpp \
-    ats/transports/tcpip_server/src/tcpip_socket_util.cpp
+    ats/transports/tcpip_server/src/tcpip_dls_server.cpp \
+    ats/transports/tcpip_server/src/tcpip_socket_util.cpp \
+    ats/dls/common/src/ats_dls.c
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_HEADERS)/diag/include
 
@@ -152,9 +154,9 @@ LOCAL_PROPRIETARY_MODULE := true
 LOCAL_VENDOR_MODULE := true
 
 LOCAL_CPPFLAGS := $(ats-gateway-def) \
-	-DSOCK_PATH='"/vendor/app/GatewayServer/ATS_sockets"' \
-	-DSOCK_PATH_SERVER='"/vendor/app/GatewayServer/ATS_sockets/unix_sock.server"' \
-	-DSOCK_PATH_GATEWAY='"/vendor/app/GatewayServer/ATS_sockets/unix_sock.gateway"'
+    -DSOCK_PATH='"/vendor/app/GatewayServer/ATS_sockets"' \
+    -DSOCK_PATH_SERVER='"/vendor/app/GatewayServer/ATS_sockets/unix_sock.server"' \
+    -DSOCK_PATH_GATEWAY='"/vendor/app/GatewayServer/ATS_sockets/unix_sock.gateway"'
 
 LOCAL_C_INCLUDES := \
     $(LOCAL_PATH)/ats/transports/tcpip_gateway/inc \
@@ -162,14 +164,16 @@ LOCAL_C_INCLUDES := \
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/include/mm-audio/casa/ar_osal
 
 LOCAL_SRC_FILES := \
-	ats/transports/tcpip_gateway/src/tcpip_gateway_main.cpp \
-	ats/transports/tcpip_gateway/src/tcpip_gateway_cmd_server.cpp \
+    ats/transports/tcpip_gateway/src/tcpip_gateway_main.cpp \
+    ats/transports/tcpip_gateway/src/tcpip_gateway_cmd_server.cpp \
+    ats/transports/tcpip_gateway/src/tcpip_gateway_dls_server.cpp \
+    ats/transports/tcpip_gateway/src/tcpip_gateway_socket_util.cpp \
     ats/sockets/linux/src/ar_sockets.cpp
 
 LOCAL_SHARED_LIBRARIES := \
-	liblx-osal \
-	libutils \
-	libcutils
+    liblx-osal \
+    libutils \
+    libcutils
 
 LOCAL_LDLIBS := -llog
 

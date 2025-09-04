@@ -2,7 +2,7 @@
 #define __SP_RX_H__
 
 /*==============================================================================
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
 
   @file sp_rx.h
@@ -32,10 +32,10 @@
 ==============================================================================*/
 #define SP_MAX_INPUT_PORTS 1
 #define SP_MAX_OUTPUT_PORTS 1
-#define SP_STACK_SIZE 4096
+#define SP_STACK_SIZE 16384
 
 /* Unique Module ID */
-#define MODULE_ID_SPEAKER_PROTECTION_V5 0x070010E2
+#define MODULE_ID_SPEAKER_PROTECTION_V7 0x0701000F
 
 /** @h2xmlm_module       {"MODULE_ID_SPEAKER_PROTECTION_V5",
                           MODULE_ID_SPEAKER_PROTECTION_V5}
@@ -62,8 +62,24 @@
      - #PARAM_ID_RTM_LOGGING_ENABLE\n
      - #PARAM_ID_SP_TH_PI_DERV_CTRL_CFG\n
      - #PARAM_ID_SP_CPS_STATIC_CFG\n
+     - #PARAM_ID_SPKR_PROT_EX_CPS_DEMO_CFG\n
+     - #PARAM_ID_SPKR_PROT_RX_EX_CPS2_BATTCONFIG_LFATTEN_PARAM\n
+     - #PARAM_ID_SPKR_PROT_EX_RX_CPS2_PARAM\n
+     - #PARAM_ID_SPKR_PROT_EX_RX_CPS_BOOSTOPERATION_PARAM\n
+     - #PARAM_ID_SPKR_PROT_CPSBASIC_CFG\n
+     - #PARAM_ID_CPS_LPASS_HW_INTF_CFG\n
+     - #PARAM_ID_CPS_LPASS_SWR_THRESHOLDS_CFG\n
      - #PARAM_ID_RX_CPS_FINE_PARAM\n
      - #PARAM_ID_SP_EX_CPS_STATS\n
+     - #PARAM_ID_SPKR_PROT_EX_RX_CPS2_DEMO_PKT_PARAM\n
+     - #PARAM_ID_SPKR_PROT_EX_RX_CPS2_DEMO_PARAM\n
+     - #PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PKT_PARAM\n
+     - #PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PARAM\n
+     - #PARAM_ID_SPKR_PROT_T0_CALI_PARAM\n
+     - #PARAM_ID_SPKR_PROT_EX_RX_BATTTEMP_DATA_PARAM\n
+     - #PARAM_ID_SPKR_PROT_DYNAMIC_NOTCH_PARAM\n
+     - #PARAM_ID_SPKR_PROT_LIN_RX_DYNAMIC_CFG\n
+     - #PARAM_ID_SPKR_PROT_SPEAKERS_LINK_MODE_PARAM\n
      - #PARAM_ID_SP_EX_RX_POWLIM_MODE2_CFG_PARAM\n
      - #PARAM_ID_SPv5_SP_TMAX_XMAX_LOGGING_EXTN\n
 
@@ -75,7 +91,7 @@
 *  - Data Format          : FIXED_POINT\n
 *  - fmt_id               : Don't care\n
 *  - Sample Rates         : 48000\n
-*  - Number of channels   : 1 and 2\n
+*  - Number of channels   : 1 to 8\n
 *  - Channel type         : 1 to 63\n
 *  - Bits per sample      : 16, 24  \n
 *  - Q format             : 15 for bps = 16 and 27 for bps = 24\n
@@ -92,8 +108,9 @@ supported bps
      @h2xmlm_supportedContTypes  {APM_CONTAINER_TYPE_GC}
      @h2xmlm_isOffloadable        {false}
      @h2xmlm_stackSize            {SP_STACK_SIZE}
-    @h2xmlm_ctrlDynamicPortIntent  { "SP VI intent id for communicating Vsens and Isens data" = INTENT_ID_SP, maxPorts= 1 }
-    @h2xmlm_ctrlDynamicPortIntent  { "SP VI intent id for communicating CPS data" = INTENT_ID_CPS, maxPorts= 1 }
+    @h2xmlm_ctrlDynamicPortIntent  { "SP VI intent id for communicating Vsens and Isens data" = INTENT_ID_SP,
+maxPorts= 1 }
+    @h2xmlm_ctrlDynamicPortIntent  { "SP CPS intent id for communicating CPS data" = INTENT_ID_CPS, maxPorts= 1 }
      @h2xmlm_ToolPolicy              {Calibration}
 
 
@@ -113,7 +130,7 @@ supported bps
 
 /* Maximum number of speakers supported in speaker protection Rx
     processing. */
-#define SP_NUM_MAX_SPKRS 4
+#define SP_NUM_MAX_SPKRS 8
 
 /* Maximum number of stages in the notch filter. */
 #define SP_NCH_FILT_STAGES_MAX 5
@@ -150,12 +167,23 @@ supported bps
 
 /* LPASS CPS HW INTF TYPE*/
 #define DMA_MODE 2
+
+#define MAX_CPS_BOOST_INDUCTOR_CURRENT_SAMPLES_IN_PACKET_48K (4800)
+#define MAX_CPS_BOOST_INDUCTOR_CURRENT_SAMPLES_IN_PACKET_96K (9600)
+#define MAX_CPS_BOOST_INDUCTOR_CURRENT_SAMPLES_IN_PACKET_192K (19200)
+
+#define SP_NILIM_DISCRETE (11)
+
+#define FIR_LEN_MAX (385)
+
+#define N_VPH_RANGE (25)
+
 /*==============================================================================
    Constants
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_STATIC_CFG 0x080011E8
+#define PARAM_ID_SP_STATIC_CFG 0x08001B3C
 
 /*==============================================================================
    Type definitions
@@ -308,6 +336,21 @@ struct param_id_sp_static_cfg_t
     /**< @h2xmle_description {Pilot tone frequencies. Pilot tone frequency values MUST be the same for the RX/TH/EX modules}
          @h2xmle_rangeList   {"16"=16; "40"=40}
          @h2xmle_default     {40} */
+
+   uint32_t cps_sampling_rate;
+   /**< @h2xmle_description {CPS sampling rate for DMA/Pandeiro}
+	@h2xmle_rangeList   {"24000"=24000; "48000"=48000}
+	@h2xmle_default     {48000} */
+
+   uint32_t chip;
+   /**< @h2xmle_description {attached WSA 88xx}
+	@h2xmle_rangeList   {"884x"=0; "885x"=1}
+	@h2xmle_default     {0} */
+
+   uint32_t cps_mode_flag; //reserved for future
+   /**< @h2xmle_description {Flag to enable/disable limiter based on Vbatt/DieTemp}
+	@h2xmle_rangeList   {"disabled"=0; "enabled"=1; "LFSN bass shelf"=2; "6dB attenuation at low-die-temperature"=3; "CPSv2.0 with Predictive boost"=4; "CPSv2.0 without Predictive boost"=5; "CPS-bypass"=6; "Phy model single"=7; "Phy model shared"=8; "CPS-basic-single"=9; "CPS-basic-stereo"=10}
+    @h2xmle_default     {0}*/
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -318,7 +361,7 @@ struct param_id_sp_static_cfg_t
   ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_CPS_STATIC_CFG 0x08001258
+#define PARAM_ID_SP_CPS_STATIC_CFG 0x08001B3D
 
 /*==============================================================================
    Type definitions
@@ -389,7 +432,7 @@ struct param_id_sp_cps_static_cfg_t
 
 
 /* Unique Parameter id */
-#define PARAM_ID_SP_EX_CPS_DEMO_CFG 0x0800125A
+#define PARAM_ID_SP_EX_CPS_DEMO_CFG 0x08001B3E
 
 /*==============================================================================
    Type definitions
@@ -420,7 +463,7 @@ struct param_id_sp_ex_cps_demo_cfg_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_EX_CPS_STATS 0x0800125B  //todo:ms13 update this in ccb as well
+#define PARAM_ID_SP_EX_CPS_STATS 0x08001B3F  //todo:ms13 update this in ccb as well
 /*==============================================================================
    Type definitions
 ==============================================================================*/
@@ -491,7 +534,10 @@ struct param_id_sp_ex_cps_stats_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_OP_MODE 0x080011E9
+#define PARAM_ID_SP_OP_MODE 0x08001B40
+/* unique param id for spv5 */
+#define PARAM_ID_SP_OP_MODE_V5 0x080011E9
+
 
 /*==============================================================================
    Type definitions
@@ -525,7 +571,7 @@ struct param_id_sp_op_mode_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_TRANSITION_ASP_ENABLE 0x080011EA
+#define PARAM_ID_SP_TRANSITION_ASP_ENABLE 0x08001B41
 
 /*==============================================================================
    Type definitions
@@ -557,7 +603,7 @@ struct param_id_sp_transition_asp_enable_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_TRANSITION_ASP_CALIB_PARAM 0x080011EB
+#define PARAM_ID_SP_TRANSITION_ASP_CALIB_PARAM 0x08001B42
 
 /*==============================================================================
    Type definitions
@@ -602,7 +648,7 @@ struct param_id_sp_transition_asp_calib_param_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SPv5_SP_DYNAMIC_CFG 0x08001532
+#define PARAM_ID_SPv5_SP_DYNAMIC_CFG 0x08001B43
 
 /*==============================================================================
    Type definitions
@@ -759,6 +805,36 @@ struct sp_th_ctrl_param_t
 #include "spf_end_pack.h"
 ;
 
+typedef struct sp_fir_cfg_t sp_fir_cfg_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_fir_cfg_t
+{
+	int16_t numTaps;
+	/**< @h2xmle_description 	{Number of fir filter coefficients}
+	@h2xmle_range   	{1...385}
+	@h2xmle_default     {49} */
+	int16_t Q;                              // Q-Factor
+	/**< @h2xmle_description 	{Q factor of numerator coefficients}
+	@h2xmle_default 	{0} */
+	int32_t taps[FIR_LEN_MAX];    // numerator coefficients
+	/**< @h2xmle_description 	{FIR filter coefficients.} 
+	@h2xmle_defaultList			{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}*/
+} 
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
 #include "spf_begin_pack.h"
 #include "spf_begin_pragma.h"
 /** @h2xmlp_subStruct */
@@ -857,6 +933,7 @@ struct sp_ex_ctrl_param_t
     /**< @h2xmle_description {Band splitting even config}
      */
     sp_tdf2_cfg_t band_splitting_odd_filter_cfg; // band splitting odd config
+   sp_fir_cfg_t band_splitting_linear_phase_filter_cfg;// band splitting using linear-phase filters
     /**< @h2xmle_description {Band splitting odd config}
      */
 }
@@ -1096,6 +1173,7 @@ struct param_id_sp_dynamic_cfg_t
        int32_t limiter_auto_release_flag;     // limiter gain release constant
       /**< @h2xmle_description {flag for automatic release time in limiter}
            @h2xmle_rangeList       {"Disable"=0; "Enable"=1}
+   int32_t filterbank_type; // 0 IIR and 1 FIR
            @h2xmle_default     {1} */
 
        uint32_t num_ch;
@@ -1121,7 +1199,7 @@ struct param_id_sp_dynamic_cfg_t
 ==============================================================================*/
 
 /* Structure definition for Parameter */
-#define PARAM_ID_SP_TH_DEMO_CFG 0x080011ED
+#define PARAM_ID_SP_TH_DEMO_CFG 0x08001B44
 
 /*==============================================================================
    Type definitions
@@ -1157,7 +1235,7 @@ struct param_id_sp_th_demo_cfg_t
 ==============================================================================*/
 
 /* Structure definition for Parameter */
-#define PARAM_ID_SP_EX_DEMO_CFG 0x080011EE
+#define PARAM_ID_SP_EX_DEMO_CFG 0x08001B45
 
 /*==============================================================================
    Type definitions
@@ -1189,7 +1267,7 @@ struct param_id_sp_ex_demo_cfg_t
 ==============================================================================*/
 
 /* Structure definition for Parameter */
-#define PARAM_ID_SP_TH_STATS 0x080011EF  //todo:MS13: Update in CCB as well
+#define PARAM_ID_SP_TH_STATS 0x08001B46  //todo:MS13: Update in CCB as well
 
 /*==============================================================================
    Type definitions
@@ -1266,11 +1344,11 @@ struct param_id_sp_th_stats_t
     /**< @h2xmle_description {Number of speaker channels}
          @h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4}
          @h2xmle_default     {2} */
-//#ifdef __H2XML__
+#ifdef __H2XML__
     sp_th_rx_param_t th_rx_demo_param[0];
     /**< @h2xmle_description {structure containing speaker params for RX thermal control block.}
          @h2xmle_variableArraySize  {num_ch} */
-//#endif
+#endif
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -1281,7 +1359,7 @@ struct param_id_sp_th_stats_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_EX_STATS 0x080011F0
+#define PARAM_ID_SP_EX_STATS 0x08001B47
 
 /*==============================================================================
    Type definitions
@@ -1469,11 +1547,11 @@ struct param_id_sp_ex_stats_t
          @h2xmle_dataFormat  {Q0}
          @h2xmle_default     {0} */
 
-//#ifdef __H2XML__
-    sp_ex_rx_param_t ex_rx_demo_param[0];
-    /**< @h2xmle_description {structure containing speaker params for RX excursion control block.}
-         @h2xmle_variableArraySize  {num_ch} */
-//#endif
+#ifdef __H2XML__
+   sp_ex_rx_param_t ex_rx_demo_param[0];
+/**< @h2xmle_description {structure containing speaker params for RX excursion control block.}
+@h2xmle_variableArraySize  {num_ch} */
+#endif
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -1484,7 +1562,7 @@ struct param_id_sp_ex_stats_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_STATS 0x080011F1
+#define PARAM_ID_SP_STATS 0x08001B48
 
 /*==============================================================================
    Type definitions
@@ -1542,7 +1620,7 @@ struct param_id_sp_stats_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_TMAX_XMAX_LOGGING 0x080011F2
+#define PARAM_ID_SP_TMAX_XMAX_LOGGING 0x08001B49
 
 /*==============================================================================
    Type definitions
@@ -1608,7 +1686,7 @@ struct param_id_sp_tmax_xmax_logging_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SPv5_SP_TMAX_XMAX_LOGGING_EXTN 0x08001367
+#define PARAM_ID_SPv5_SP_TMAX_XMAX_LOGGING_EXTN 0x08001B4A
 
 /*==============================================================================
    Type definitions
@@ -1638,13 +1716,14 @@ struct param_id_sp_tmax_xmax_logging_extn_params_t
     /**< @h2xmle_description {Mode of bigdata logging}
          @h2xmle_rangeList   {"Version_0"=0; "Version_1"=1}
          @h2xmle_default     {1} */
-
-    int32_t Tmax[SP_NUM_MAX_SPKRS];    // rated speaker maximum temperature acts as threshold for over temperature check
-    /**< @h2xmle_description {Rated speaker max temperature Tmax (in degrees C)}
-         @h2xmle_range       {-1920..12800}
-         @h2xmle_dataFormat  {Q6}
-         @h2xmle_defaultList {5120,5120,5120,5120} */
-
+#ifdef __H2XML__
+   int32_t Tmax[0]; // rated speaker maximum temperature acts as threshold for over temperature check
+   /**< @h2xmle_description {Rated speaker max temperature Tmax (in degrees C)}
+        @h2xmle_variableArraySize  {num_ch}
+        @h2xmle_range       {-1920..12800}
+        @h2xmle_dataFormat  {Q6}
+        @h2xmle_default {5120} */
+#endif
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -1655,7 +1734,7 @@ struct param_id_sp_tmax_xmax_logging_extn_params_t
   ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_TH_PI_DERV_CTRL_CFG 0x08001314
+#define PARAM_ID_SP_TH_PI_DERV_CTRL_CFG 0x08001B4B
 
 /*==============================================================================
    Type definitions
@@ -1696,7 +1775,7 @@ struct param_id_sp_th_pi_derv_ctrl_cfg_t
   ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_RX_CPS_FINE_PARAM 0x0800134A
+#define PARAM_ID_RX_CPS_FINE_PARAM 0x08001B4C
 
 /*==============================================================================
    Type definitions
@@ -1760,7 +1839,7 @@ struct param_id_sp_rx_cps_fine_param_t
   ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_EX_RX_POWLIM_MODE2_CFG_PARAM 0x0800135A
+#define PARAM_ID_SP_EX_RX_POWLIM_MODE2_CFG_PARAM 0x08001B4D
 
 /*==============================================================================
    Type definitions
@@ -1824,7 +1903,7 @@ struct param_id_sp_ex_rx_power_limiter_mode2_param_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_VERSION 0x080011F3
+#define PARAM_ID_SP_VERSION 0x08001B4E
 
 /*==============================================================================
    Type definitions
@@ -1950,7 +2029,7 @@ struct lpass_swr_hw_reg_cfg_t
 {
    uint32_t num_spkr;
    /**< @h2xmle_description {Number of Rx speakers.}
-        @h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4}
+        @h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5;"6"=6;"7"=7;"8"=8}
         @h2xmle_default     {2} */
 
    uint32_t lpass_wr_cmd_reg_phy_addr;
@@ -2003,7 +2082,7 @@ struct param_id_cps_lpass_hw_intf_cfg_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_RX_EX_CPS2_BATTCONFIG_LFATTEN_PARAM  0x0800150A
+#define PARAM_ID_SP_RX_EX_CPS2_BATTCONFIG_LFATTEN_PARAM  0x08001B4F
 
 /*==============================================================================
    Type definitions
@@ -2027,13 +2106,15 @@ struct param_id_sp_rx_ex_cps2_battconfig_lfatten_param_t
    @h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4}
    @h2xmle_default     {2} */
 
-   int32_t battery_config_low_frequency_attenuation_q27[SP_NUM_MAX_SPKRS];   // LF SN attenuation in the low frequency, dependent on the battery config
+#ifdef __H2XML__
+	int32_t battery_config_low_frequency_attenuation_q27[0];   // LF SN attenuation in the low frequency, dependent on the battery config
    /**< @h2xmle_description {low-frequency attenuation observed when using 88xx with different battery configurations,
-                       input is in linear format, default for 1S : idb(-2dB), 3S : idb(0dB) in Q27}
-   @h2xmle_range       {0,..134217728}
-   @h2xmle_dataFormat  {Q27}
-   @h2xmle_defaultList     {106612930,106612930,106612930,106612930} */
-
+							  input is in linear format, default for 1S : idb(-2dB), 3S : idb(0dB) in Q27}
+	@h2xmle_variableArraySize  {num_ch}
+	@h2xmle_range       {0,..134217728}
+	@h2xmle_dataFormat  {Q27}
+    @h2xmle_default     {134217728} */
+#endif
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -2044,7 +2125,7 @@ struct param_id_sp_rx_ex_cps2_battconfig_lfatten_param_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_EX_RX_CPS2_PARAM 0x0800150E
+#define PARAM_ID_SP_EX_RX_CPS2_PARAM 0x08001B50
 
 /*==============================================================================
    Type definitions
@@ -2179,13 +2260,164 @@ struct param_id_sp_ex_rx_cps2_param_t
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
 ;
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_EX_RX_CPS_BOOSTOPERATION_PARAM 0x08001B51
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+typedef struct param_id_sp_cps_batttemp_param_t param_id_sp_cps_batttemp_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct param_id_sp_cps_batttemp_param_t
+{
+	int16_t attenuateSmallerLoads; //apply a small attenuation if the resistance drops from say 8 to 4.
+	/**< @h2xmle_description { //apply a small attenuation if the resistance drops from say 8 to 4.}
+	@h2xmle_range       {0..1}
+	@h2xmle_default     {0}*/
+
+	uint16_t reserved;
+	/**< @h2xmle_description {Reserved Field.}
+	@h2xmle_visibility {hide}
+	@h2xmle_default {0} */
+
+	int32_t RphDelta_LowTemp; // R_series_Delta with low temperature variation.
+	/**< @h2xmle_description {R_series_Delta with low temperature variation.}
+	@h2xmle_range       {0..16777216 } // 1 Ohm max
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {1006632} : 0.060 Ohms */
+
+	int32_t BattTempRange[2]; // Battery temperature range where the Series resistance needs to be varied.
+	/**< @h2xmle_description {Battery temperature range where the Series resistance needs to be varied.}
+	@h2xmle_range       {-335544320..335544320} // -20 to 20 C
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_defaultList     {-335544320,335544320} */ // BattTempRange[0] > BattTempRange[1]
+
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+typedef struct param_id_sp_cps_boostoperation_param_t param_id_sp_cps_boostoperation_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct param_id_sp_cps_boostoperation_param_t
+{
+	int32_t boost_headroom_voltage;
+	/**< @h2xmle_description {Boost headroom}
+	@h2xmle_range       {0..50331648}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {16777216} */ // 1V
+
+	int32_t UVLO_voltage;
+	/**< @h2xmle_description {undervoltage-lockout voltage}
+	@h2xmle_range       {0..50331648} // auto multiplied by 2 for 2S
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {33554432} */ // 2V
+
+	int32_t switching_freq;
+	/**< @h2xmle_description {in MHz.}
+	@h2xmle_range       {20132659..80530636}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {40265318} */ // 2.4MHz
+
+	int32_t boost_max_voltage;
+	/**< @h2xmle_description {clip detect limiter threshold release time in msec}
+	@h2xmle_range       {167772160..335544320} // 8-20V
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {192937984} */ //11.5V
+
+	int32_t boost_inductor_muH;
+	/**< @h2xmle_description {clip detect limiter threshold release time in msec}
+	@h2xmle_range       {1677721..167772160}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {16777216} */ //1muH
+
+	int32_t efficiency_classD;
+	/**< @h2xmle_description {ClassD efficiency}
+	@h2xmle_range       {0..16777216}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {15770583} */ //0.94
+
+	int32_t peak_power_per_channel;
+	/**< @h2xmle_description {max amp power limit}
+	@h2xmle_range       {16777216..251658240}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {134217728} */ //8W
+
+	int32_t peak_power_per_pair;
+	/**< @h2xmle_description {max amp power limit for two shared channels}
+	@h2xmle_range       {16777216..251658240}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {201326592} */ //12W
+
+	int32_t inductor_current_limit[SP_NILIM_DISCRETE];
+	/**< @h2xmle_description {current limit for a specific Vph-range (x num stacks), 
+	Vph_vec[] = { 2, 2.2, 2.5, 2.7, 3, 3.3, 3.7, 4, 4.2, 4.5, 5.0 };}
+	@h2xmle_range       {0..117440512}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_defaultList     {16777,167772,1677722,21810381,33554432,41943040,53687091,60397978,67108864,67108864,67108864} */ //4A
+
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_ex_rx_cps_boostoperation_param_t param_id_spkr_prot_ex_rx_cps_boostoperation_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_EX_RX_CPS_BOOSTOPERATION_PARAM",
+                         PARAM_ID_SPKR_PROT_EX_RX_CPS_BOOSTOPERATION_PARAM}
+    @h2xmlp_description {Parameter used for setting parameters related to CPS3}
+    @h2xmlp_toolPolicy  {CALIBRATION; RTC_READONLY} */
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+// CPS version 3 param: construction without look-up tables.
+struct param_id_spkr_prot_ex_rx_cps_boostoperation_param_t
+{
+	int32_t boost_limiter_attack_time_ms;
+	/**< @h2xmle_description {clip detect limiter threshold attack time in msec}
+	@h2xmle_range       {0..10}
+	@h2xmle_default     {0} */
+
+	int32_t boost_limiter_release_time_ms;
+	/**< @h2xmle_description {clip detect limiter threshold release time in msec}
+	@h2xmle_range       {0..20}
+	@h2xmle_default     {1} */
+
+	param_id_sp_cps_batttemp_param_t cps_batttemp_param;
+	/**< @h2xmle_description {specifics to address low batt temp behavior}*/
+
+	int32_t num_ch;
+	/**< @h2xmle_description {Number of speaker channels}
+	@h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5;"6"=6;"7"=7;"8"=8}
+	@h2xmle_default     {2} */
+
+#ifdef __H2XML__
+	param_id_sp_cps_boostoperation_param_t cps3_param[0];
+	/**< @h2xmle_description {structure containing speaker params for CPS3 in Rx-CPS block}
+	@h2xmle_variableArraySize  {num_ch} */
+#endif
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
 
 /*==============================================================================
    Constants
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_SPEAKERS_LINK_MODE_PARAM 0x0800150B
+#define PARAM_ID_SP_SPEAKERS_LINK_MODE_PARAM 0x08001B52
 
 /*==============================================================================
    Type definitions
@@ -2208,11 +2440,12 @@ struct param_id_sp_speakers_link_mode_param_t
    @h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4}
    @h2xmle_default     {2} */
 
-   uint32_t speakers_link_mode[SP_NUM_MAX_SPKRS];
-   /**< @h2xmle_description {mode indicating which channels to be gain linked}
-   @h2xmle_rangeList   {"Unlink"=0;"Link_1"=1;"Link_2"=2}
-   @h2xmle_defaultList {1,1,1,1} */
 
+	uint32_t speakers_link_mode[0];
+	/**< @h2xmle_description {mode indicating which channels to be gain linked}
+	@h2xmle_rangeList   {"Unlink"=0;"Link_1"=1;"Link_2"=2;"Link_3"=3;"Link_4"=4}
+	@h2xmle_defaultList {1,1,1,1,1,1,1,1}
+	@h2xmle_variableArraySize  {num_ch} */
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"
@@ -2223,7 +2456,186 @@ struct param_id_sp_speakers_link_mode_param_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_EX_RX_CPS2_DEMO_PKT_PARAM 0x0800150D
+#define PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PKT_PARAM 0x08001B53
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+typedef struct sp_ex_rx_cps3_param_t sp_ex_rx_cps3_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_ex_rx_cps3_param_t
+{
+	// demo packet for CPS3: boost operation included.
+	uint32_t BoostLimiterThr_rt_q27[SP_EX_RX_DEMO_SMPL_PER_PKT];
+	/**< @h2xmle_description {Boost limiter threshold in linear format, -\inftydB to 0dB; limit to -12dB or something similar
+							  default is idb(0) in Q27 }
+	@h2xmle_range       {0..134217728}
+	@h2xmle_default     {134217728}
+	@h2xmle_dataFormat  {Q27} */
+
+	uint32_t DutyCycle_rt_q27[SP_EX_RX_DEMO_SMPL_PER_PKT];
+	/**< @h2xmle_description {Duty cycle}
+	@h2xmle_range       {0..134217728}
+	@h2xmle_default     {67108864}
+	@h2xmle_dataFormat  {Q27} */
+
+	// demo packet for CPS3: boost operation included.
+	uint32_t inductorcurrent_rt_q27[MAX_CPS_BOOST_INDUCTOR_CURRENT_SAMPLES_IN_PACKET_48K];
+	/**< @h2xmle_description {Boost inductor current }//
+	@h2xmle_range       {0..2147483648}
+	@h2xmle_default     {0}
+	@h2xmle_dataFormat  {Q27} */
+
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_ex_rx_cps3_demo_pkt_param_t param_id_spkr_prot_ex_rx_cps3_demo_pkt_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PKT_PARAM",
+                         PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PKT_PARAM}
+    @h2xmlp_description {Parameter used for getting plots for cps2}
+    @h2xmlp_toolPolicy  {RTM} */
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+// CPS version 3 param: construction without look-up tables.
+struct param_id_spkr_prot_ex_rx_cps3_demo_pkt_param_t
+{
+	uint32_t num_ch;
+	/**< @h2xmle_description {Number of speaker channels}
+	@h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5;"6"=6;"7"=7;"8"=8}
+	@h2xmle_default     {2} */
+	int32_t demo_out_valid;
+	/**< @h2xmle_description {flag to indicate signals output contains meaningful data}
+	@h2xmle_rangeList       {"Disable"=0; "Enable"=1}
+	@h2xmle_default     {0} */
+#ifdef __H2XML__
+	// demo packet for CPS3
+	sp_ex_rx_cps3_param_t ex_rx_cps3_demo_param[0];
+	/**< @h2xmle_description {structure containing speaker params for CPS3 in Rx Excursion Control block}
+	@h2xmle_variableArraySize  {num_ch} */
+#endif
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_T0_CALI_PARAM 0x08001B54
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_t0_cali_param_t param_id_spkr_prot_t0_cali_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_T0_CALI_PARAM",
+                         PARAM_ID_SPKR_PROT_T0_CALI_PARAM}
+    @h2xmlp_description {parameter used to hold intial speaker temperature T0 (in degrees C).}
+    @h2xmlp_toolPolicy  {CALIBRATION} */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_spkr_prot_t0_cali_param_t
+{
+   uint32_t num_ch;
+	/**< @h2xmle_description {Number of speaker channels}
+	@h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5;"6"=6;"7"=7;"8"=8}
+	@h2xmle_default     {2} */
+
+#ifdef __H2XML__
+	int32_t t0_cali_q6[0];
+	/**< @h2xmle_description {Rated speaker max temperature Tmax (in degrees C)}
+	     @h2xmle_range       {-1920..12800}
+	     @h2xmle_dataFormat  {Q6}
+	     @h2xmle_default {-1920} 
+		 @h2xmle_variableArraySize  {num_ch} */
+#endif
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_EX_RX_BATTTEMP_DATA_PARAM 0x08001B55
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_ex_rx_batttemp_data_param_t param_id_spkr_prot_ex_rx_batttemp_data_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_EX_RX_BATTTEMP_DATA_PARAM",
+                         PARAM_ID_SPKR_PROT_EX_RX_BATTTEMP_DATA_PARAM}
+    @h2xmlp_description {parameter used to set CPS batt temp data in mC that needs to be fed into cps.}
+    @h2xmlp_toolPolicy  {CALIBRATION} */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_spkr_prot_ex_rx_batttemp_data_param_t
+{
+   int32_t batttemp_data;  // battery tem
+	/**< @h2xmle_description {CPS batt temp data in mC that needs to be fed into cps}
+	@h2xmle_range       {-20000..70000} //-20 to 70C.
+	@h2xmle_default     {20} */ //20C
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PARAM 0x08001B56
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_ex_rx_cps3_demo_param_t param_id_spkr_prot_ex_rx_cps3_demo_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PARAM",
+                         PARAM_ID_SPKR_PROT_EX_RX_CPS3_DEMO_PARAM}
+    @h2xmlp_description {parameter used to set downsample ratio from internal values to output.}
+    @h2xmlp_toolPolicy  {CALIBRATION} */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_spkr_prot_ex_rx_cps3_demo_param_t
+{
+   uint16_t dsr; // downsample ratio from internal values to output
+   /**< @h2xmle_description {down sampling ratio for cps demo params}
+        @h2xmle_default     {10}  */
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_EX_RX_CPS2_DEMO_PKT_PARAM 0x08001B57
 
 /*==============================================================================
    Type definitions
@@ -2302,7 +2714,7 @@ struct param_id_sp_ex_rx_cps2_demo_pkt_param_t
 ==============================================================================*/
 
 /* Unique Paramter id */
-#define PARAM_ID_SP_EX_RX_CPS2_DEMO_PARAM 0x0800150C
+#define PARAM_ID_SP_EX_RX_CPS2_DEMO_PARAM 0x08001B58
 
 /*==============================================================================
    Type definitions
@@ -2323,6 +2735,392 @@ struct param_id_sp_ex_rx_cps2_demo_param_t
    uint16_t dsr;               // downsample ratio from internal values to output
    /**< @h2xmle_description {down sampling ratio for cps demo params}
         @h2xmle_default     {10}  */
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+   Constants
+==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_DYNAMIC_NOTCH_PARAM 0x08001B59
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+typedef struct sp_dynamic_notch_param_t sp_dynamic_notch_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_dynamic_notch_param_t
+{
+	int32_t dyn_proc_type; // 0 disable, 1 shelving, 2 notch and 3 reserved
+						   /**< @h2xmle_description {Dynamic processing feature indicator}
+						   @h2xmle_rangeList       {"Disable"=0; "Notch filter"=1; "Bass boost"=2; "Notch filter with resonance tracking"=3}
+						   @h2xmle_default     {0} */
+	int32_t dyn_proc_fc_q20;
+	/**< @h2xmle_description {Dynamic processing -- Parametric EQ filter frequency in Hz}
+	@h2xmle_range       {104857600..2097152000}
+	@h2xmle_dataFormat  {Q20}
+	@h2xmle_default     {262144000} */
+	int32_t dyn_proc_Q_q24;
+	/**< @h2xmle_description {Dynamic processing -- Parametric EQ filter Q}
+	@h2xmle_range       {1677721..1677721600}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {50331648} */
+	int32_t dyn_proc_threshold_dBq23;
+	/**< @h2xmle_description {Dynamic processing -- compression threshold in dB}
+	@h2xmle_range       {-754974720..0}
+	@h2xmle_dataFormat  {Q23}
+	@h2xmle_default     {0} */
+	int32_t dyn_proc_ratio_q24;
+	/**< @h2xmle_description {Dynamic processing -- compression ratio}
+	@h2xmle_range       {16777216 .. 1677721600}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {16777216} */
+	int32_t dyn_proc_makeup_gain_q27;
+	/**< @h2xmle_description {Dynamic processing -- makeup gain in linear scale}
+	@h2xmle_range       {8468566..2127207634}
+	@h2xmle_dataFormat  {Q27}
+	@h2xmle_default     {134217728} */
+	int32_t dyn_proc_attack_time_ms;
+	/**< @h2xmle_description {dynamic processing -- attach time in msec}
+	@h2xmle_range       {0..1000}
+	@h2xmle_default     {10} */
+	int32_t dyn_proc_release_time_ms;
+	/**< @h2xmle_description {dynamic processing -- release time in msec}
+	@h2xmle_range       {0..1000}
+	@h2xmle_default     {100} */
+	int32_t dyn_proc_auto_release_flag;
+	/**< @h2xmle_description {flag for automatic release time in dynamic processing}
+	@h2xmle_rangeList       {"Disable"=0; "Enable"=1}
+	@h2xmle_default     {1} */
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_dynamic_notch_param_t param_id_spkr_prot_dynamic_notch_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_DYNAMIC_NOTCH_PARAM",
+                         PARAM_ID_SPKR_PROT_DYNAMIC_NOTCH_PARAM}
+    @h2xmlp_description {parameter used to configure per channel dynamic notch.}
+    @h2xmlp_toolPolicy  {CALIBRATION} */
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_spkr_prot_dynamic_notch_param_t
+{
+	uint32_t num_ch;
+	/**< @h2xmle_description {Number of speaker channels}
+	@h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5;"6"=6;"7"=7;"8"=8}
+	@h2xmle_default     {2} */
+#ifdef __H2XML__
+	sp_dynamic_notch_param_t dynamic_notch_param[0];
+	/**< @h2xmle_description {Structure containing dynamic notch params}
+	@h2xmle_variableArraySize  {num_ch}*/
+#endif
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/*==============================================================================
+     Constants
+  ==============================================================================*/
+
+/* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_LIN_RX_DYNAMIC_CFG 0x08001B5A
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+typedef struct sp_lin_ex_common_ctrl_param_t sp_lin_ex_common_ctrl_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_lin_ex_common_ctrl_param_t
+{
+	// Ex Rx Ch 0 params
+	int32_t amp_gain_q24;                        // Amplifier gain that will be used in scaling Tx vsense signal to rx signal
+	/**< @h2xmle_description {speaker peak voltage for a digitally full-scale signal}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {16777216} */
+	int32_t trace_resistance_rx_q24;
+	/**< @h2xmle_description {trace resistance from amp output to speakers in Ohm}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Re_ohm_q24;
+	/**< @h2xmle_description {DC resistance of voice coil at room temperature or small signal level in Ohm}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {111394816} */
+	int32_t Bl_q24;
+	/**< @h2xmle_description {Force factor (Bl product)}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {19316736} */
+	int32_t Mms_gram_q24;
+	/**< @h2xmle_description {Ch 0: Mechanical mass of loudspeaker diaphragm in gram}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {2260992} */
+	int32_t Rms_KgSec_q24;
+	/**< @h2xmle_description {Mechanical damping or resistance of loudspeaker in Kg/sec}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {1843200} */
+	int32_t Kms_Nmm_q24;
+	/**< @h2xmle_description {Mechanical stiffness of driver suspension in N/mm}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {42573824} */
+	int32_t Kms1_Nmm2_q24;
+	/**< @h2xmle_description {Para-Suspension Stiffness}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Kms2_Nmm3_q24;
+	/**< @h2xmle_description {Para-Suspension Stiffness}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Kms3_Nmm4_q24;
+	/**< @h2xmle_description {Para-Suspension Stiffness}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Kms4_Nmm5_q24;
+	/**< @h2xmle_description {Para-Suspension Stiffness}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Rms1_Kgm_q24;
+	/**< @h2xmle_description {Para-Mechanical damping}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Rms2_Kgsm2_q24;
+	/**< @h2xmle_description {Para-Mechanical damping}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Bl1_NAmm_q24;
+	/**< @h2xmle_description {Force factor (Bl1)}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Bl2_NAmm2_q24;
+	/**< @h2xmle_description {Force factor (Bl2)}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Bl3_NAmm3_q24;
+	/**< @h2xmle_description {Force factor (Bl3)}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+	int32_t Bl4_NAmm4_q24;
+	/**< @h2xmle_description {Force factor (Bl4)}
+	@h2xmle_range       {-2147483648..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */
+
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+typedef struct sp_lin_ctrl_param_t sp_lin_ctrl_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_lin_ctrl_param_t
+{
+	/* Rx lin/Ex common parameters*/
+	sp_lin_ex_common_ctrl_param_t lin_ex_common_ctrl_param;
+
+	int32_t input_gain_q24;
+	/**< @h2xmle_description {linearization input gain to allow processing head room}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {16777216} */
+	int32_t max_amplitude_q24;
+	/**< @h2xmle_description {amplitude limiter threshold in linear scale}
+	@h2xmle_range       {0..2147483647}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {16777216} */
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_lin_rx_dynamic_cfg_t param_id_spkr_prot_lin_rx_dynamic_cfg_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_LIN_RX_DYNAMIC_CFG",
+                         PARAM_ID_SPKR_PROT_LIN_RX_DYNAMIC_CFG}
+    @h2xmlp_description {Linearization}
+    @h2xmlp_toolPolicy  {Calibration;RTC} */
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_spkr_prot_lin_rx_dynamic_cfg_t
+{
+	// LIN_RX common params
+	int32_t link_all_channels_gain;
+	/**< @h2xmle_description {Apply common gain to both channels}
+	@h2xmle_rangeList       {"Unlinked"=0; "Linked"=1}
+	@h2xmle_default     {0} */
+	int32_t limiter_release_time_ms;
+	/**< @h2xmle_description {limiter release time in msec}
+	@h2xmle_range       {0..32767}
+	@h2xmle_default     {100} */
+	uint32_t num_ch;
+	/**< @h2xmle_description {Number of speaker channels}
+	@h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5;"6"=6;"7"=7;"8"=8}
+	@h2xmle_default     {2} */
+#ifdef __H2XML__
+	/* Speaker-specific parameters */
+	sp_lin_ctrl_param_t fbsp_lin_ctrl_param[0];
+	/**< @h2xmle_description {structure containing speaker params for RX linearization block.}
+	@h2xmle_variableArraySize  {num_ch} */
+#endif
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+
+/*==============================================================================
+	 Constants
+  ==============================================================================*/
+
+  /* Unique Paramter id */
+#define PARAM_ID_SPKR_PROT_CPSBASIC_CFG 0x08001B5B
+
+/*==============================================================================
+   Type definitions
+==============================================================================*/
+
+typedef struct sp_cps_basic_param_t sp_cps_basic_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_cps_basic_param_t 
+{
+	int32_t power_W_perchannel[N_VPH_RANGE];
+	/**< @h2xmle_description {Power in W per channel in q24, we will use the same variable if SoC is chosen. use the first 20-21 entries here for SoC }
+	@h2xmle_range       {0...2147483647} //0-14W
+	@h2xmle_dataFormat  {Q24}
+	//in W assuming 8 ohm loads: 0.0007176, 0.07176, 0.18025, 0.7176, 2.8568, 4.5277, 5.7001, 5.8328, 5.9687, 6.1077, 6.25, 6.3956, 6.5446, 6.6203, 6.697, 6.697, 6.7745, 6.9323, 7.0126, 7.176, 7.176, 7.176, 7.176, 7.176, 7.176}
+	@h2xmle_defaultList {12039,1203933,3024093,12039330,47929151,75962201,95631809,97858145,100138169,102470202,104857600,107300363,109800168,111070203,112357016,112357016,113657250,116304694,117651905,120393302,120393302,120393302,120393302,120393302,120393302}*/
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+typedef struct sp_cpsbasic_ctrl_param_t sp_cpsbasic_ctrl_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_cpsbasic_ctrl_param_t {
+	int32_t useSoC;
+	/**< @h2xmle_description {enable/disable SoC as sense input to control CPS-basic.}
+	@h2xmle_range       {0...1}
+	@h2xmle_default     {0} */
+
+	int32_t SoC_CV_mode;
+	/**< @h2xmle_description {SoC that determines cconst voltage charging mode.}
+	@h2xmle_range       {0...1677721600}
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {1342177280} */
+
+	int32_t PowerW_CV_mode;
+	/**< @h2xmle_description {PowerW for the CV mode; during tuning }
+	@h2xmle_range       {0..134217728} //0 to 8W
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {117440512} 7W */
+
+	int32_t low_batt_temperature_threshold;
+	/**< @h2xmle_description {batt low temp threshold below which attenuation is applied due to increased series losses.}
+	@h2xmle_range       {-671088640..335544320} //-40C to 20C
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */ //0C
+
+	int32_t min_low_batt_temperature;
+	/**< @h2xmle_description {batt minimum low temp threshold; below which no increases in attenuation are applied.}
+	@h2xmle_range       {-671088640..0} //-40C to 0C
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {-671088640} */ //40C
+
+	int32_t lowbatttemp_limthr_dB_slope;
+	/**< @h2xmle_description {Attenuation applied as a function of low batt temp in dB/degrees C.}
+	@h2xmle_range       {-671088640..0} //-40C to 0C
+	@h2xmle_dataFormat  {Q24}
+	@h2xmle_default     {0} */ //0dB/degrees C
+
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+typedef struct sp_cps_basic_stereopower_param_t sp_cps_basic_stereopower_param_t;
+
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+/** @h2xmlp_subStruct */
+struct sp_cps_basic_stereopower_param_t {
+	int32_t power_W_perpair[N_VPH_RANGE];
+	/**< @h2xmle_description {Power in W per channel in q24, we will use the same variable if SoC is chosen. use the first 20-21 entries here for SoC }
+	@h2xmle_range       {0...2147483647} //0-14W
+	@h2xmle_dataFormat  {Q24}
+	//in W assuming 8 ohm loads: 0.0007    0.0718    0.1802    4.7176    6.8568    8.5277    9.7001    9.8328    9.9687   10.1077   10.2500   10.3956   10.5446   10.6203   10.6970 10.6970   10.7745   10.9323   11.0126   11.1760   11.1760   11.1760   11.1760   11.1760   11.1760}
+	@h2xmle_defaultList {12039, 1203933, 3024093, 79148194, 115038015, 143071065, 162740673, 164967009, 167247033, 169579066, 171966464, 174409227, 176909032, 178179067, 179465880, 179465880, 180766114, 183413558, 184760769, 187502166, 187502166, 187502166, 187502166, 187502166, 187502166}*/
+
+}
+#include "spf_end_pragma.h"
+#include "spf_end_pack.h"
+;
+
+
+/* Structure definition for Parameter */
+typedef struct param_id_spkr_prot_cpsbasic_param_t param_id_spkr_prot_cpsbasic_param_t;
+
+/** @h2xmlp_parameter   {"PARAM_ID_SPKR_PROT_CPSBASIC_CFG",
+						 PARAM_ID_SPKR_PROT_CPSBASIC_CFG}
+	@h2xmlp_description {CPS}
+	@h2xmlp_toolPolicy  {Calibration;RTC} */
+#include "spf_begin_pack.h"
+#include "spf_begin_pragma.h"
+struct param_id_spkr_prot_cpsbasic_param_t {
+	sp_cpsbasic_ctrl_param_t fbsp_rx_cps_cpsbasic_ctrl_params;
+	/**< @h2xmle_description {specifics to address low batt temp behavior and cps-basic operation}*/
+
+	sp_cps_basic_stereopower_param_t fbsp_rx_cps_stereopower_params;
+	/**< @h2xmle_description {specifics to address stereo power in connected channels.}*/
+
+	int32_t num_ch;
+	/**< @h2xmle_description {Number of speaker channels}
+	@h2xmle_rangeList   {"1"=1;"2"=2;"3"=3;"4"=4;"5"=5;"6"=6;"7"=7;"8"=8}
+	@h2xmle_default     {2} */
+
+#ifdef __H2XML__
+	sp_cps_basic_param_t cpsbasic_param[0];
+	/**< @h2xmle_description {structure containing speaker params for CPS-basic in Rx-CPS block}
+	@h2xmle_variableArraySize  {num_ch} */
+#endif
 }
 #include "spf_end_pragma.h"
 #include "spf_end_pack.h"

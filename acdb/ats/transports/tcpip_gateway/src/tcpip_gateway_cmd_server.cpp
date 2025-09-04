@@ -1,47 +1,60 @@
 /**
 *==============================================================================
-*  \file tcpip_gateway_server.h
+*  \file tcpip_gateway_cmd_server.cpp
 *  \brief
-*                     T C P I P  G A T E W A Y  S E R V E R
+*                  T C P I P  G A T E W A Y  C M D  S E R V E R
 *                             S O U R C E  F I L E
 *
-*         This file defines the class for the ATS Gateway Server as
-*         well as types and defines used by the server.
+*         Contains the implementation for the ATS TCPIP Gateway Command Server.
+*         This Command server is the middle man between ATS TCPIP Command
+*         Server and QACT and handles forwarding messages between the two.
 *
-*  \cond
+*  \copyright
 *      Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 *      SPDX-License-Identifier: BSD-3-Clause-Clear
-*  \endcond
 *==============================================================================
 */
 
+/**
+* Preprocessor Macro Notes
+*------------------------------------------------------------------------------
+* ATS_DATA_LOGGING | define this macro in your build configuration to enable
+*                  | recieving log packet data from SPF
+*/
+
+#include "tcpip_gateway_cmd_server.h"
+#include "tcpip_gateway_socket_util.h"
 #include <thread>
 #include <chrono>
-#include "tcpip_gateway_cmd_server.h"
 
 #define IS_NULL(ptr) (ptr == NULL)
 
 /* The name of the unix abstract domain socket used by the
  * ATS Server to communicate with the gateway server */
-#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME "#AtsServer"
-#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY "#AtsGWServer"
+#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_ATS_CMD "#AtsCmdServer"
+#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_ATS_DLS "#AtsDlsServer"
+#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_CMD "#AtsGwCmdServer"
+#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_DLS "#AtsGwDlsServer"
 
  /* The character length of the unix domain socket string
   * including the null-terminating character */
-#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_LENGTH 11
-#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_LENGTH 13
+#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_ATS_CMD_LENGTH 13
+#define ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_CMD_LENGTH 16
 
-  /*
-  ============================================================================
-					 Prototypes / Typedefs / Callbacks
-  ============================================================================
-  */
+typedef enum ats_server_id_t
+{
+	ATS_CMD_SERVER = 0,
+	ATS_DLS_SERVER = 1
+}ats_server_id_t;
+/*
+============================================================================
+					Prototypes / Typedefs / Callbacks
+============================================================================
+*/
 
 typedef void* (TcpipGatewayServer::* thread_callback)(void* args);
 thread_callback thd_cb_start_routine = &TcpipGatewayServer::connect_routine;
 thread_callback thd_cb_transmit_routine = &TcpipGatewayServer::transmit_routine;
-
-int32_t tgws_mem_cpy(void* dest, size_t sz_dest, void* src, size_t sz_src);
 
 /**
 * \brief
@@ -107,17 +120,14 @@ static void tgws_create_error_resp(
 	uint32_t& rsp_msg_legnth
 );
 
-void tgws_get_client_address(uint16_t port, ar_socket_addr_storage_t* client_sock_addr);
-void tgws_get_server_address(uint16_t port, ar_socket_addr_storage_t* server_sock_addr);
-
 /*
 ============================================================================
 				   TCPIP Gateway Server Implementation
 ============================================================================
 */
 
-TcpipGatewayServer::TcpipGatewayServer(std::string port, uint32_t option)
-	:str_pc_port{ port },
+TcpipGatewayServer::TcpipGatewayServer(std::string ip_addr, std::string port, uint32_t option)
+	: str_ip_addr { ip_addr }, str_pc_port{ port },
 	option{ option }
 {
 	struct ar_heap_info_t heap_inf =
@@ -165,48 +175,55 @@ TcpipGatewayServer::~TcpipGatewayServer()
 int32_t TcpipGatewayServer::connect_to_target_server(ar_socket_t* server_socket)
 {
 	int32_t status = AR_EOK;
-	int32_t sock_status = 0;
 	uint32_t client_addr_length = 0;
 	uint32_t server_addr_length = 0;
-
-	GATEWAY_DBG("Connecting to CMD server...");
-
-#if defined (__linux__)
-	if (AR_FAILED(ar_socket_unix(server_socket)))
-		return AR_EFAILED;
-	client_addr_length = ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_LENGTH
-		+ sizeof(uint16_t);
-	server_addr_length = ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_LENGTH
-		+ sizeof(uint16_t);
-#elif defined (_WIN32)
-	if (AR_FAILED(ar_socket_tcp(server_socket)))
-		return AR_EFAILED;
-	/*client_addr_length = sizeof(ar_socket_addr_storage_t);*/
-	client_addr_length = sizeof(ar_socket_addr_in_t);
-	server_addr_length = sizeof(ar_socket_addr_in_t);
-#endif
-
-	GATEWAY_ERR("sockfd: %d", *server_socket);
-
 	ar_socket_addr_storage_t client_sockaddr = { 0 };
-	tgws_get_client_address(pc_port, &client_sockaddr);
 	ar_socket_addr_storage_t server_sockaddr = { 0 };
-	tgws_get_server_address(TCPIP_CMD_SERVER_PORT, &server_sockaddr);
 
-	client_addr_length = sizeof(ar_socket_addr_in_t);
-	GATEWAY_DBG("Bind client address to Gateway Server socket");
+// #if defined (__linux__)
+// 	if (AR_FAILED(ar_socket_unix(server_socket)))
+// 		return AR_EFAILED;
+// 	client_addr_length = ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_CMD_LENGTH
+// 		+ sizeof(uint16_t);
+// 	server_addr_length = ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_ATS_CMD_LENGTH
+// 		+ sizeof(uint16_t);
+// #elif defined (_WIN32)
+// 	if (AR_FAILED(ar_socket_tcp(server_socket)))
+// 		return AR_EFAILED;
+// 	/*client_addr_length = sizeof(ar_socket_addr_storage_t);*/
+// 	client_addr_length = sizeof(ar_socket_addr_in_t);
+// 	server_addr_length = sizeof(ar_socket_addr_in_t);
+// #endif
+
+// 	ar_socket_addr_storage_t client_sockaddr = { 0 };
+// 	tgws_get_client_address(pc_port, &client_sockaddr);
+// 	ar_socket_addr_storage_t server_sockaddr = { 0 };
+// 	tgws_get_server_address(TCPIP_CMD_SERVER_PORT, &server_sockaddr);
+
+	tgws_util_create_socket(server_socket);
+
+	//Get Client address and address length (this gateway dls server)
+	tgws_util_get_socket_address(tgws_get_address_type(), ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_CMD, pc_port, &client_sockaddr);
+	client_addr_length = tgws_util_get_socket_address_length(tgws_get_address_type(), ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_CMD);
+
+	//Get ATS Service address and address length
+	server_addr_length = tgws_util_get_socket_address_length(tgws_get_address_type(), ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_ATS_CMD);
+	tgws_util_get_socket_address(tgws_get_address_type(), ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_ATS_CMD, TCPIP_CMD_SERVER_PORT, &server_sockaddr);
+
 	/* Bind to client address to the Gateway Server socket */
+	client_addr_length = sizeof(ar_socket_addr_in_t);
 	status = ar_socket_bind(
 		*server_socket,
 		(ar_socket_addr_t*)&client_sockaddr,
 		client_addr_length);// This is size of ar_socket_addr_un_t::sun_family
 	if (AR_FAILED(status))
 	{
+		GATEWAY_DBG("Unable to bind client address to gateway cmd server socket");
 		ar_socket_close(*server_socket);
 		return AR_EFAILED;
 	}
 
-	GATEWAY_DBG("Connect to CMD Server socket");
+	GATEWAY_DBG("Attempting to connect to ats command server socket...");
 	client_addr_length = sizeof(server_sockaddr);
 	/* Connect Gateway to the CMD Server socket */
 	status = ar_socket_connect(
@@ -215,12 +232,12 @@ int32_t TcpipGatewayServer::connect_to_target_server(ar_socket_t* server_socket)
 		server_addr_length); // This is size of ar_socket_addr_un_t::sun_family
 	if (AR_FAILED(status))
 	{
-		GATEWAY_ERR("Error[%d]: Failed to connect to CMD Server.");
+		GATEWAY_ERR("Error[%d]: Failed to connect to ats command server.");
 		ar_socket_close(*server_socket);
 		return AR_EFAILED;
 	}
 
-	GATEWAY_INFO("Connected to CMD server.");
+	GATEWAY_INFO("Connected to ats command server.");
 	return status;
 }
 
@@ -228,7 +245,7 @@ void* TcpipGatewayServer::connect_routine(void* arg)
 {
 	__UNREFERENCED_PARAM(arg);
 
-	GATEWAY_DBG("Starting Gateway server thread.");
+	GATEWAY_DBG("Starting gateway command server thread.");
 	int status = 0;
 	int32_t thd_index = 0;
 	struct timeval timeout = { 0 };
@@ -249,16 +266,16 @@ void* TcpipGatewayServer::connect_routine(void* arg)
 	switch (option)
 	{
 	case TGWS_CONNECTION_OPTION_USB:
-		GATEWAY_INFO("Connecting to Gatway over usb");
+		GATEWAY_INFO("Connecting to gateway over usb");
 
-		status = ar_socket_get_addr_info(TGWS_IP_ADDRESS,
+		status = ar_socket_get_addr_info(str_ip_addr.c_str(),
 			config->port_str,
 			&socket_hints,
 			&connected_devices_addr_info);
 		break;
 	case TGWS_CONNECTION_OPTION_WIFI:
 	{
-		GATEWAY_INFO("Connecting to Gatway over wifi");
+		GATEWAY_INFO("Connecting to gateway over wifi");
 		//int fd;
 		//struct ifreq ifr;
 		//fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -311,7 +328,7 @@ void* TcpipGatewayServer::connect_routine(void* arg)
 		connected_devices_addr_info->ai_addr,
 		(int)connected_devices_addr_info->ai_addrlen);
 
-	GATEWAY_ERR("Listening for connections...");
+	GATEWAY_INFO("Listening for connections...");
 
 	//listens queue is of size 1
 	status = ar_socket_listen(listen_socket, 1);
@@ -345,7 +362,7 @@ void* TcpipGatewayServer::connect_routine(void* arg)
 		{
 			//do not create more threads if already connected.
 			//ar_osal_mutex_lock(connected_mutex);
-			//if (is_connected) 
+			//if (is_connected)
 			//{
 			//	ar_osal_mutex_unlock(connected_mutex);
 			//	GATEWAY_ERR("Detected a new connection request. Refusing...");
@@ -353,7 +370,7 @@ void* TcpipGatewayServer::connect_routine(void* arg)
 			//	continue;
 			//}
 
-			GATEWAY_INFO("Accept successful to Gateway Service: Client Socket %d", client_socket_temp);
+			GATEWAY_DBG("Accept successful to gateway command server: Client Socket %d", client_socket_temp);
 			ar_osal_mutex_unlock(connected_mutex);
 
 			timeout.tv_sec = TGWS_CONNECTION_TIMEOUT;
@@ -396,6 +413,8 @@ void* TcpipGatewayServer::connect_routine(void* arg)
 				GATEWAY_ERR("Failed to create data transmission thread.");
 				break;
 			}
+
+			start_dls_server();
 
 			/* Only one client is allowed to connect to the server for now.
 			 * Block until client calls QUIT on transmission thread.
@@ -503,9 +522,6 @@ int32_t TcpipGatewayServer::execute_server_command(
 	uint32_t service_cmd_id, ar_socket_t sender_socket, uint32_t message_length,
 	tgws_status_codes_t& status_code)
 {
-	int32_t bytes_sent = 0;
-	int32_t status = AR_EOK;
-
 	switch (service_cmd_id)
 	{
 	case ATS_CMD_ONC_SET_MAX_BUFFER_LENGTH:
@@ -831,31 +847,32 @@ main_cleanup:
 	return status;
 }
 
+void TcpipGatewayServer::start_dls_server()
+{
+	#if defined(ATS_DATA_LOGGING)
+
+	GATEWAY_INFO("starting gateway dls server");
+	//Start the DLS client server after successfully connecting to the CMD server
+	dls_server.set_ip_address(str_ip_addr);
+	dls_server.stop();
+
+	//wait for arts tcpip dls server to be ready
+	std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+	uint32_t status = dls_server.start();
+	if (AR_FAILED(status))
+	{
+		GATEWAY_ERR("Error[%d]: Unable to start gateway dls server. Client won't be able to recieve log packets. Skipping...");
+	}
+
+	#endif
+}
+
 /*
 ============================================================================
 				   Helper Functions
 ============================================================================
 */
-
-int32_t tgws_mem_cpy(void* dest, size_t sz_dest, void* src, size_t sz_src)
-{
-	int32_t result = AR_EOK;
-
-	if (dest == NULL || src == NULL) return result;
-	if (sz_src <= sz_dest)
-	{
-		ar_mem_cpy((int8_t*)dest, sz_dest, (int8_t*)src, sz_src);
-
-		if (sz_dest - sz_src != 0)
-		{
-			ar_mem_set((int8_t*)dest + sz_src, 0, sz_dest - sz_src);
-		}
-		result = 0;
-	}
-
-	return result;
-}
-
 
 static bool_t tgws_get_ats_command_length(
 	char_t* message_buffer, uint32_t message_buffer_size, uint32_t* data_length)
@@ -932,63 +949,4 @@ static void tgws_create_error_resp(
 	ar_mem_cpy(message_buffer + ATS_HEADER_LENGTH, ATS_ERROR_CODE_LENGTH,
 		&ar_status_code,
 		ATS_ERROR_CODE_LENGTH);
-}
-
-void tgws_get_client_address(uint16_t port, ar_socket_addr_storage_t* client_sock_addr)
-{
-	// ar_socket_addr_storage_t client_sock_addr = { 0 };
-#if defined(__linux__)
-	ar_socket_addr_un_t* client_sockaddr =
-		(ar_socket_addr_un_t*)client_sock_addr;
-
-	client_sockaddr->sun_family = AF_UNIX;
-
-	ar_strcpy(client_sockaddr->sun_path,
-		AR_UNIX_PATH_MAX,
-		ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY,
-		ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_GATEWAY_LENGTH);
-	client_sockaddr->sun_path[0] = 0;
-
-#elif defined(_WIN32)
-//     //Windows
-	ar_socket_addr_in_t client_sockaddr = { 0 };
-	client_sockaddr.sin_family = AF_INET;
-	inet_pton(
-		AF_INET,
-		TGWS_IP_ADDRESS,
-		&client_sockaddr.sin_addr.s_addr);
-	client_sockaddr.sin_port = htons((u_short)port);
-
-	ar_mem_cpy(client_sock_addr, sizeof(ar_socket_addr_storage_t), &client_sockaddr, sizeof(ar_socket_addr_in_t));
-#endif
-}
-
-void tgws_get_server_address(uint16_t port, ar_socket_addr_storage_t* server_sock_addr)
-{
-	// ar_socket_addr_storage_t server_sock_addr = { 0 };
-#if defined(__linux__)
-
-	ar_socket_addr_un_t* server_sockaddr =
-		(ar_socket_addr_un_t*)server_sock_addr;
-	//Create Abstract Domain Socket
-	server_sockaddr->sun_family = AF_UNIX;
-	ar_strcpy(server_sockaddr->sun_path,
-		AR_UNIX_PATH_MAX,
-		ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME,
-		ATS_UNIX_SOCKET_ABSTRACT_DOMAIN_NAME_LENGTH);
-	server_sockaddr->sun_path[0] = 0;
-
-#elif defined(_WIN32)
-
-	 //Windows
-	ar_socket_addr_in_t server_sockaddr = { 0 };
-	server_sockaddr.sin_family = AF_INET;
-	inet_pton(AF_INET, TGWS_IP_ADDRESS, &server_sockaddr.sin_addr.s_addr);
-	server_sockaddr.sin_port = htons(port);
-	//server_sockaddr.sin_port = htons(TCPIP_CMD_SERVER_PORT);
-	ar_mem_cpy(server_sock_addr, sizeof(ar_socket_addr_storage_t), &server_sockaddr, sizeof(ar_socket_addr_in_t));
-
-#endif
-
-	// return server_sock_addr;
 }

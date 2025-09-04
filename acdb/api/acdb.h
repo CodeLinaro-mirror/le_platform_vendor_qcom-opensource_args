@@ -35,7 +35,7 @@ extern "C"
 #define ACDB_SOFTWARE_VERSION_MAJOR 0x00000001
 
 /**< The ACDB Software Minor Version */
-#define ACDB_SOFTWARE_VERSION_MINOR 0x00000028
+#define ACDB_SOFTWARE_VERSION_MINOR 0x00000029
 
 /**< The ACDB Software Revision */
 #define ACDB_SOFTWARE_VERSION_REVISION 0x00000000
@@ -1954,6 +1954,9 @@ The memory types are: System Heap(0x0), Physically Contiguous Memory (0x01)
 processor domain ID */
 #define ACDB_HW_ACCEL_MEM_TYPE(proc_id) ((AcdbHwAccelMemType)(proc_id >> 30))
 
+/**< Extracts proc id from processor domain ID */
+#define ACDB_HW_ACCEL_PROC_ID(proc_id) (proc_id & 0x3FFFFFFF)
+
 typedef struct _acdb_subgraph_proc_pair_t AcdbSubgraphProcPair;
 struct _acdb_subgraph_proc_pair_t
 {
@@ -2229,7 +2232,7 @@ struct _acdb_get_proc_tagged_modules_rsp_t {
 	uint32_t num_procs;
 	/**< size of the proc_tagged_module_list */
 	uint32_t list_size;
-	/**< A pointer to contiguous block of memory 
+	/**< A pointer to contiguous block of memory
 	containing tagged module ID and IID ordered by processor domain */
 	AcdbProcTaggedModules *proc_tagged_module_list;
 }

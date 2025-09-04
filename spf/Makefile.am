@@ -63,6 +63,8 @@ spf_sources = ./api/apm/apm_api.h \
                 ./api/modules/data_marker_api.h \
                 ./api/modules/detection_cmn_api.h \
                 ./api/modules/display_port_api.h \
+                ./api/modules/dls_api.h \
+                ./api/modules/dls_log_pkt_hdr_api.h \
                 ./api/modules/dtmf_detection_api.h \
                 ./api/modules/flac_decoder_api.h \
                 ./api/modules/fluence_ffv_common_calibration.h \
@@ -126,7 +128,18 @@ spf_sources = ./api/apm/apm_api.h \
                 ./api/modules/wsa_haptics_vi_api.h \
                 ./api/modules/congestion_buf_api.h \
                 ./api/modules/jitter_buf_api.h \
-                ./api/vcpm/vcpm_api.h
+                ./api/vcpm/vcpm_api.h \
+                ./api/modules/asr_module_calibration_api.h \
+                ./api/modules/us_tone_renderer_api.h \
+                ./api/modules/mma_api.h \
+                ./api/modules/media_fmt_api_basic.h \
+                ./api/modules/amdb_api.h
+
+asps_sources =  ./api/asps/asps_ads_usecase_api.h \
+                ./api/asps/asps_upd_usecase_api.h \
+                ./api/asps/asps_acd_usecase_api.h \
+                ./api/asps/asps_acm_api.h \
+                ./api/asps/asps_us_rendering_usecase_api.h
 
 spf_includedir = $(includedir)/spf
 spf_include_HEADERS = $(spf_sources)
@@ -135,8 +148,8 @@ asps_includedir = $(includedir)/spf/asps
 asps_include_HEADERS = $(asps_sources)
 
 #LIBRARY for LE apps
-lib_LTLIBRARIES = libspfheaders.la
-libspfheaders_la_CC = @CC@
-libspfheaders_la_SOURCES = $(spf_sources)
-libspfheaders_la_CFLAGS = $(AM_CFLAGS)
-libspfheaders_la_LDFLAGS = -shared -avoid-version
+lib_LTLIBRARIES = libar-spfhdrs.la
+libar_spfhdrs_la_CC = @CC@
+libar_spfhdrs_la_SOURCES = $(spf_sources) $(asps_sources)
+libar_spfhdrs_la_CFLAGS = $(AM_CFLAGS)
+libar_spfhdrs_la_LDFLAGS = -shared -version-number @LT_VERSION_NUMBER@

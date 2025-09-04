@@ -666,8 +666,8 @@ int32_t AcdbGenericListFind(void* list, void* item, uint32_t item_size, uint32_t
 		return AR_ENOTEXIST;
 	}
 	if (SEARCH_ERROR == AcdbDataBinarySearch2(
-		gen_list->list, list_size, 
-		item, num_search_keys, 
+		gen_list->list, list_size,
+		item, num_search_keys,
 		num_struct_elements, &item_index))
 	{
 		return AR_ENOTEXIST;

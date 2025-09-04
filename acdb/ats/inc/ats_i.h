@@ -73,11 +73,21 @@ offset += sizeof(type); \
 break; \
 }while(0)
 
+#define ATS_READ_SEEK_I_ANY(value, buf, offset, type)\
+do {\
+value = *(type*)&buf[offset]; \
+offset += sizeof(type); \
+break; \
+}while(0)
+
 #define ATS_READ_SEEK_UI32(value, buf, offset) \
     ATS_READ_SEEK_I(value, buf, offset, uint32_t)
 
 #define ATS_READ_SEEK_I32(value, buf, offset) \
     ATS_READ_SEEK_I(value, buf, offset, int32_t)
+
+#define ATS_READ_SEEK_UI16(value, buf, offset) \
+    ATS_READ_SEEK_I_ANY(value, buf, offset, uint16_t)
 
 /**< Extract the command id from the LSW of the 4byte service command id x*/
 #define ATS_GET_COMMAND_ID(x) ((0x0000FFFFul & x))
@@ -90,9 +100,9 @@ break; \
 #define ATS_RTC_SERVICE_ID (0x5254ul << 16)
 #define ATS_RTC_CMD_ID(x) ((0x5254ul << 16) | (0xFFFFul & x))
 
-/**< Defines command IDs for the Real Time Monitoring service */
-#define ATS_RTM_SERVICE_ID (0x524dul << 16)
-#define ATS_RTM_CMD_ID(x) ((0x524dul << 16) | (0xFFFFul & x))
+/**< Defines command IDs for the Data logging service */
+#define ATS_DLS_SERVICE_ID (0x524dul << 16)
+#define ATS_DLS_CMD_ID(x) ((0x524dul << 16) | (0xFFFFul & x))
 
 /**< Defines command IDs for the File Transfer service */
 #define ATS_FTS_CMD_ID(x) ((0x4654ul << 16) | (0xFFFFul & x))
@@ -154,14 +164,6 @@ struct _ats_version_t
 /*-----------------------------------------------------------------------------
 * ATS Commands
 *----------------------------------------------------------------------------*/
-
-
-//TODO: Add descriptions
-#define ATS_CMD_RTM_GET_VERSION ATS_RTM_CMD_ID(5)
-#define ATS_CMD_RTM_START ATS_RTM_CMD_ID(1)
-#define ATS_CMD_RTM_STOP ATS_RTM_CMD_ID(2)
-#define ATS_CMD_RTM_CONFIGURE ATS_RTM_CMD_ID(3)
-#define ATS_CMD_RTM_GET_LOG_DATA ATS_RTM_CMD_ID(4)
 
 /* ---------------------------------------------------------------------------
 * ATS_CMD_RT_GET_VERSION Declarations and Documentation
@@ -2724,7 +2726,7 @@ typedef struct ats_cmd_selected_client_db_reinit_req_t {
  *    This data can also be persisted to the delta file by setting the
  *    persist flag to true.
  *
- *    \param[in] cmd_id 
+ *    \param[in] cmd_id
  *        Command ID is ATS_CMD_ONC_SET_CAL_DATA_NON_PERSIST_2
  *    \param[in] cmd
  *        This is a pointer to AtsSetCalDataNonPersistReq
@@ -2755,6 +2757,8 @@ struct _ats_set_cal_data_non_persist_req_t {
 #include "acdb_end_pack.h"
 ;
 
+/** @} */ /* end_addtogroup ATS_CMD_ONC_SET_CAL_DATA_NON_PERSIST_2 */
+
 /* ---------------------------------------------------------------------------
 * ATS_CMD_ONC_SET_CAL_DATA_PERSIST_2 Declarations and Documentation
 *-------------------------------------------------------------------------- */
@@ -2768,7 +2772,7 @@ struct _ats_set_cal_data_non_persist_req_t {
  *    This data can also be persisted to the delta file by setting the
  *    persist flag to true.
  *
- *    \param[in] cmd_id 
+ *    \param[in] cmd_id
  *        Command ID is ATS_CMD_ONC_SET_CAL_DATA_PERSIST_2
  *    \param[in] cmd
  *        This is a pointer to AtsSetCalDataPersistReq
@@ -2799,6 +2803,8 @@ struct _ats_set_cal_data_persist_req_t {
 #include "acdb_end_pack.h"
 ;
 
+/** @} */ /* end_addtogroup ATS_CMD_ONC_SET_CAL_DATA_PERSIST_2 */
+
 /* ---------------------------------------------------------------------------
 * ATS_CMD_ONC_SET_TAG_DATA_2 Declarations and Documentation
 *-------------------------------------------------------------------------- */
@@ -2812,7 +2818,7 @@ struct _ats_set_cal_data_persist_req_t {
  *    This data can also be persisted to the delta file by setting the
  *    persist flag to true.
  *
- *    \param[in] cmd_id 
+ *    \param[in] cmd_id
  *        Command ID is ATS_CMD_ONC_SET_TAG_DATA_2
  *    \param[in] cmd
  *        This is a pointer to AtsSetTagDataReq
@@ -2843,6 +2849,221 @@ struct _ats_set_tag_data_req_t {
 }
 #include "acdb_end_pack.h"
 ;
+
+/** @} */ /* end_addtogroup ATS_CMD_ONC_SET_TAG_DATA_2 */
+
+/* ---------------------------------------------------------------------------
+* ATS_CMD_DLS_START Declarations and Documentation
+*-------------------------------------------------------------------------- */
+/** \addtogroup ATS_CMD_DLS_START
+\{ */
+
+/**
+ *    Registers a single log code and begins logging data for the log code.
+ *    on SPF
+ *
+ *    \param[in] cmd_id
+ *        Command ID is ATS_CMD_DLS_START
+ *    \param[in] cmd
+ *        This is a pointer to AtsDlsLogCode
+ *    \param[in] cmd_size
+ *        This is the size of uint16_t
+ *    \param[out] rsp
+ *        There is no input structure; set this to NULL.
+ *    \param[in] rsp_size
+ *        There is no input structure; set this to NULL.
+ *
+ *    \return
+ *        - AR_EOK -- Command executed successfully.
+ *        - AR_EBADPARAM -- Invalid input parameters were provided.
+ *        - AR_EFAILED -- Command execution failed.
+ *
+ *    \sa ats_dls_ioctl
+ */
+#define ATS_CMD_DLS_START ATS_DLS_CMD_ID(1)
+
+typedef struct _ats_dls_log_code_t AtsDlsLogCode;
+#include "acdb_begin_pack.h"
+struct _ats_dls_log_code_t {
+    uint16_t log_code;
+}
+#include "acdb_end_pack.h"
+;
+/** @} */ /* end_addtogroup ATS_CMD_DLS_START */
+
+/* ---------------------------------------------------------------------------
+* ATS_CMD_DLS_STOP Declarations and Documentation
+*-------------------------------------------------------------------------- */
+/** \addtogroup ATS_CMD_DLS_STOP
+\{ */
+/**
+ *    De-egisters a single log code and stops logging data for the log code
+ *    on SPF
+ *
+ *    \param[in] cmd_id
+ *        Command ID is ATS_CMD_DLS_STOP
+ *    \param[in] cmd
+ *        This is a pointer to AtsDlsLogCode
+ *    \param[in] cmd_size
+ *        This is the size of uint16_t
+ *    \param[out] rsp
+ *        There is no input structure; set this to NULL.
+ *    \param[in] rsp_size
+ *        There is no input structure; set this to NULL.
+ *
+ *    \return
+ *        - AR_EOK -- Command executed successfully.
+ *        - AR_EBADPARAM -- Invalid input parameters were provided.
+ *        - AR_EFAILED -- Command execution failed.
+ *
+ *    \sa ats_dls_ioctl
+ */
+#define ATS_CMD_DLS_STOP ATS_DLS_CMD_ID(2)
+/** @} */ /* end_addtogroup ATS_CMD_DLS_STOP */
+
+/* ---------------------------------------------------------------------------
+* ATS_CMD_DLS_CONFIGURE Declarations and Documentation
+*-------------------------------------------------------------------------- */
+/** \addtogroup ATS_CMD_DLS_CONFIGURE
+\{ */
+/**
+ *    Configures the size of the shared memory buffer pool. The buffer
+ *    pool is where all the dls buffers are stored/updated/retrieved.
+ *
+ *    \param[in] cmd_id
+ *        Command ID is ATS_CMD_DLS_CONFIGURE
+ *    \param[in] cmd
+ *        This is a pointer to AtsDlsBufferPoolConfig
+ *    \param[in] cmd_size
+ *        This is the size of AtsDlsBufferPoolConfig
+ *    \param[out] rsp
+ *        There is no input structure; set this to NULL.
+ *    \param[in] rsp_size
+ *        There is no input structure; set this to NULL.
+ *
+ *    \return
+ *        - AR_EOK -- Command executed successfully.
+ *        - AR_EBADPARAM -- Invalid input parameters were provided.
+ *        - AR_EFAILED -- Command execution failed.
+ *
+ *    \sa ats_dls_ioctl
+ */
+#define ATS_CMD_DLS_CONFIGURE ATS_DLS_CMD_ID(3)
+
+typedef struct _ats_dls_buffer_pool_config_t AtsDlsBufferPoolConfig;
+#include "acdb_begin_pack.h"
+struct _ats_dls_buffer_pool_config_t {
+    /**< The size of a single binary log packet buffer */
+	uint32_t buffer_size;
+    /**< The number of binary log buffers */
+	uint32_t buffer_count;
+}
+#include "acdb_end_pack.h"
+;
+/** @} */ /* end_addtogroup ATS_CMD_DLS_CONFIGURE */
+
+/* ---------------------------------------------------------------------------
+* ATS_CMD_DLS_GET_LOG_DATA Declarations and Documentation
+*-------------------------------------------------------------------------- */
+/** \addtogroup ATS_CMD_DLS_GET_LOG_DATA
+\{ */
+/**
+*    The log data containing log packets for each registered log code. Each
+*    registerd log code can have multiple packets within the log data buffer.
+*
+*    For example, we can have 2 log codes 0x1234 and 0x5678 where
+*       1. LC 0x1234 may have 2 packets in the log data buffer and
+*       2. LC 0x5678 may have 3 log packets in the log data buffer
+*
+*      Log Data Buffer Format:
+*
+*                .+--   +================================+
+*                |      |          'A''R''T''M'          |  bytes: 4
+*                |      |  ----------------------------  |
+*       Header-->|      |  Version                       |  bytes: 2
+*                |      |  # Log Packets                 |  bytes: 2
+*                .+--   |  Log Data Size                 |  bytes: 4
+*                .+--   .--------------------------------.
+*                |      |          Log Packet #1         |
+*                |      |  ----------------------------  |
+*                |      |  Packet Size                   |  bytes: 4
+*                |      |  Packet Data [packet size]     |  bytes: Packet Size bytes
+*                |      |--------------------------------|
+*    Log Data--> |      :              ...               :
+*                |      |--------------------------------|
+*                |      |          Log Packet #n         |
+*                |      |  ----------------------------  |
+*                |      |  Packet Size                   |  bytes: 4
+*                |      |  Packet Data [packet size]     |  bytes: Packet Size bytes
+*                .+--   +.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~.~+
+*
+ *    \param[in] cmd_id
+ *        Command ID is ATS_CMD_DLS_GET_LOG_DATA
+ *    \param[in] cmd
+ *        There is no input structure; set this to NULL.
+ *    \param[in] cmd_size
+ *        There is no input structure; set this to 0.
+ *    \param[out] rsp
+ *        TThis is a pointer to AtsDlsLogDataHeader
+ *    \param[in] rsp_size
+ *        This is the size of AtsDlsLogDataHeader
+ *
+ *    \return
+ *        - AR_EOK -- Command executed successfully.
+ *        - AR_EBADPARAM -- Invalid input parameters were provided.
+ *        - AR_EFAILED -- Command execution failed.
+ *
+ *    \sa ats_dls_ioctl
+ */
+#define ATS_CMD_DLS_GET_LOG_DATA ATS_DLS_CMD_ID(4)
+
+typedef struct _ats_dls_get_dls_log_data_header_t AtsDlsLogDataHeader;
+#include "acdb_begin_pack.h"
+struct _ats_dls_get_dls_log_data_header_t {
+	/**<'A''R''T''M'*/
+	uint32_t header_id;
+	/**< command version*/
+	uint16_t header_version;
+	/**< the number of log buffers to send*/
+	uint16_t log_buffer_count;
+	/**< the total size of all the log buffers*/
+	uint32_t total_log_data_size;
+	/* Following this header is a list of log buffers:
+     AtsBuffer log_data[];
+	 */
+}
+#include "acdb_end_pack.h"
+;
+/** @} */ /* end_addtogroup ATS_CMD_DLS_GET_LOG_DATA */
+
+/* ---------------------------------------------------------------------------
+* ATS_CMD_DLS_GET_VERSION Declarations and Documentation
+*-------------------------------------------------------------------------- */
+/** \addtogroup ATS_CMD_DLS_GET_VERSION
+\{ */
+/**
+ *    Retrieves the DLS service Version. This is actually handled
+ *    by ATS_CMD_ONC_GET_SERVICE_INFO
+ *    \param[in] cmd_id
+ *        Command ID is ATS_CMD_DLS_GET_VERSION
+ *    \param[in] cmd
+ *        This is a pointer to ...
+ *    \param[in] cmd_size
+ *        This is the size of ...
+ *    \param[out] rsp
+ *        There is no input structure; set this to NULL.
+ *    \param[in] rsp_size
+ *        There is no input structure; set this to NULL.
+ *
+ *    \return
+ *        - AR_EOK -- Command executed successfully.
+ *        - AR_EBADPARAM -- Invalid input parameters were provided.
+ *        - AR_EFAILED -- Command execution failed.
+ *
+ *    \sa ats_dls_ioctl
+ */
+#define ATS_CMD_DLS_GET_VERSION ATS_DLS_CMD_ID(5)
+/** @} */ /* end_addtogroup ATS_CMD_DLS_GET_VERSION */
 
 /* ---------------------------------------------------------------------------
 * API Definitions

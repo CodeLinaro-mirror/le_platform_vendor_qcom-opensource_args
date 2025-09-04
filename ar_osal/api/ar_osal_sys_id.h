@@ -57,7 +57,17 @@ extern "C" {
 */
 #define AR_SUB_SYS_ID_LAST     AR_APSS2
 
+/**
+* Bit masks representing the subsystem IDs. Update when subystem gets
+* added or removed.
+*/
+#define AR_SUB_SYS_IDS_MASK 0x83F
 
+#ifdef MDSP_PROC
+#define AR_DEFAULT_DSP AR_MODEM_DSP
+#else
+#define AR_DEFAULT_DSP AR_AUDIO_DSP
+#endif
 
 #ifdef __cplusplus
 }

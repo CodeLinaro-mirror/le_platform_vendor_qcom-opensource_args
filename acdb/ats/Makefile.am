@@ -6,13 +6,18 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CFLAGS = -Wall \
             -Wundef \
             -O2
-AM_CFLAGS += @GLIB_CFLAGS@ -Dstrlcpy=g_strlcpy -Dstrlcat=g_strlcat -include glib.h
+AM_CFLAGS += @GLIB_CFLAGS@ -include glib.h
+
+if USE_G_STR_FUNC
+AM_CFLAGS += -Dstrlcpy=g_strlcpy -Dstrlcat=g_strlcat
+endif
 
 AM_CFLAGS += -I$(top_srcdir)/ar_osal/api \
              -I$(top_srcdir)/acdb/api \
              -I$(top_srcdir)/acdb/inc \
              -I$(top_srcdir)/gsl/api \
-             -I$(top_srcdir)/gsl/rtc_api
+             -I$(top_srcdir)/gsl/rtc_api \
+             -I$(top_srcdir)/gsl/dls_client_api
 
 
 AM_CFLAGS += -I ${srcdir}/inc \
@@ -30,7 +35,8 @@ AM_CFLAGS += -I ${srcdir}/inc \
              -I ${srcdir}/transports/common/api/ \
              -I ${srcdir}/transports/common/inc/ \
              -I ${srcdir}/transports/tcpip_server/inc/ \
-             -I ${srcdir}/transports/tcpip_server/api/
+             -I ${srcdir}/transports/tcpip_server/api/ \
+             -I ${srcdir}/dls/common/inc
 
 AM_CPPFLAGS = $(AM_CFLAGS)
 
@@ -50,21 +56,21 @@ ats_c_sources = ./src/ats.c \
                 ./sockets/linux/src/ar_sockets.cpp \
                 ./transports/common/src/ats_transport.c \
                 ./transports/tcpip_server/src/tcpip_cmd_server.cpp \
-                ./transports/tcpip_server/src/tcpip_rtm_server.cpp \
-                ./transports/tcpip_server/src/tcpip_socket_util.cpp
-
+                ./transports/tcpip_server/src/tcpip_dls_server.cpp \
+                ./transports/tcpip_server/src/tcpip_socket_util.cpp \
+                ./dls/common/src/ats_dls.c
 
 #Includes
 lib_includedir = $(includedir)
 lib_include_HEADERS = $(ats_headers)
 requiredlibs = -lrt
 
-lib_LTLIBRARIES = libats.la
-libats_la_CC = @CC@
-libats_la_LIBADD = -lar_osal -L$(top_builddir)/ar_osal
-libats_la_LIBADD += -lacdb -L$(top_builddir)/acdb
+lib_LTLIBRARIES = libar-ats.la
+libar_ats_la_CC = @CC@
+libar_ats_la_LIBADD = -lar-osal -L$(top_builddir)/ar_osal
+libar_ats_la_LIBADD += -lar-acdb -L$(top_builddir)/acdb
 if CUTILS_SUPPORTED
-libats_la_LIBADD += -lcutils
+libar_ats_la_LIBADD += -lcutils
 AM_CFLAGS += -DAR_ATS_USE_CUTILS
 endif
 
@@ -75,17 +81,23 @@ else
 AM_CFLAGS += @DIAG_CFLAGS@
 AM_CPPFLAGS += -DFEATURE_LE_DIAG
 requiredlibs += @DIAG_LIBS@
-libats_la_LIBADD += @DIAG_LIBS@
+libar_ats_la_LIBADD += @DIAG_LIBS@
 endif
 
-libats_la_SOURCES = $(ats_c_sources)
-libats_la_CFLAGS = $(AM_CFLAGS)
-libats_la_CPPFLAGS = $(AM_CPPFLAGS)
+libar_ats_la_SOURCES = $(ats_c_sources)
+libar_ats_la_CFLAGS = $(AM_CFLAGS)
+libar_ats_la_CPPFLAGS = $(AM_CPPFLAGS)
 if USES_ATS_TRANSPORT_TCPIP
-libats_la_CFLAGS += -DATS_TRANSPORT_TCPIP
-libats_la_CPPFLAGS += -DATS_TRANSPORT_TCPIP
+libar_ats_la_CFLAGS += -DATS_TRANSPORT_TCPIP
+libar_ats_la_CPPFLAGS += -DATS_TRANSPORT_TCPIP
 endif
-libats_la_LDFLAGS = -shared -avoid-version
+
+if USES_ATS_DATA_LOGGING
+libar_ats_la_CFLAGS += -DATS_DATA_LOGGING
+libar_ats_la_CPPFLAGS += -DATS_DATA_LOGGING
+endif
+
+libar_ats_la_LDFLAGS = -shared -avoid-version  @LT_VERSION_NUMBER@
 
 AM_CPPFLAGS += -DSOCK_PATH='"/usr/bin/gateway/ats_sockets"' \
         -DSOCK_PATH_SERVER='"/usr/bin/gateway/ats_sockets/unix_sock.server"' \
@@ -95,14 +107,25 @@ AM_CPPFLAGS += -I$(srcdir)/transports/tcpip_gateway/inc
 AM_CPPFLAGS += -I$(top_srcdir)/ar_osal/api
 AM_CPPFLAGS += -I$(top_srcdir)/acdb/ats/sockets/common/api/
 
-AM_CPPFLAGS += @GLIB_CFLAGS@ -Dstrlcpy=g_strlcpy -include glib.h
+AM_CPPFLAGS += @GLIB_CFLAGS@ -include glib.h
+
+if USE_G_STR_FUNC
+AM_CPPFLAGS += -Dstrlcpy=g_strlcpy -Dstrlcat=g_strlcat
+endif
 
 gateway_sources = ./transports/tcpip_gateway/src/tcpip_gateway_main.cpp \
                   ./transports/tcpip_gateway/src/tcpip_gateway_cmd_server.cpp \
+                  ./transports/tcpip_gateway/src/tcpip_gateway_dls_server.cpp \
+                  ./transports/tcpip_gateway/src/tcpip_gateway_socket_util.cpp \
                   ./sockets/linux/src/ar_sockets.cpp
 
 bin_PROGRAMS = ats_gateway
 ats_gateway_CC = @CC@
 ats_gateway_SOURCES = $(gateway_sources)
-ats_gateway_LDADD = $(top_builddir)/ar_osal/libar_osal.la
+ats_gateway_LDADD = $(top_builddir)/ar_osal/libar-osal.la
 ats_gateway_CPPFLAGS = $(AM_CPPFLAGS)
+
+if USES_ATS_DATA_LOGGING
+ats_gateway_CFLAGS = -DATS_DATA_LOGGING
+ats_gateway_CPPFLAGS += -DATS_DATA_LOGGING
+endif

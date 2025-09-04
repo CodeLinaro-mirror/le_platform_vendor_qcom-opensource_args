@@ -8,7 +8,7 @@
 *		ACDB public interface.
 *
 * \copyright
-*  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+*  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 *  SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 *=============================================================================
@@ -31,7 +31,7 @@
 * Preprocessor Definitions and Constants
 *--------------------------------------------------------------------------- */
 #define ACDB_SOFTWARE_VERSION_MAJOR 0x00000001
-#define ACDB_SOFTWARE_VERSION_MINOR 0x00000028
+#define ACDB_SOFTWARE_VERSION_MINOR 0x00000029
 #define ACDB_SOFTWARE_VERSION_REVISION 0x00000000
 #define ACDB_SOFTWARE_VERSION_CPLINFO 0x00000000
 
@@ -73,6 +73,8 @@ struct _acdb_audio_cal_context_info_t {
     bool_t ignore_get_default_data;
     /**< A flag indicating whether check for hw accel based calibraion */
     bool_t should_check_hw_accel;
+    /**< A flag used to filter calibration based on processor domain */
+    bool_t should_filter_cal_by_proc_domain;
     /**< Keeps track of module IIDs that are associated with the
     default CKV */
     AcdbUintList default_data_iid_list;
@@ -80,6 +82,9 @@ struct _acdb_audio_cal_context_info_t {
     uint32_t subgraph_id;
     /**< The Processor to get calibration for */
     uint32_t proc_id;
+    /**< A pointer to a mapping that associates module instances with 
+    the processor domains they run on */
+    AcdbSubgraphPdmMap *sg_mod_iid_map;
     /**< An offset to a Subgrahps hardware accel module list */
     uint32_t hw_accel_module_list_offset;
     /**< The instance of the module that contains tag data */
@@ -5326,6 +5331,31 @@ int32_t AcdbGetSubgraphCalibration(AcdbAudioCalContextInfo *info,
             break;
         }
 
+        if (info->param_type == ACDB_DATA_PERSISTENT && info->should_filter_cal_by_proc_domain)
+        {
+            //check for proc id
+
+            uint32_t proc_domain_id = 0;
+            status = DataProcGetProcDomainForModule(
+                info->sg_mod_iid_map,
+                module_header.module_iid,
+                &proc_domain_id);
+            if (AR_FAILED(status))
+            {
+                ACDB_ERR("Error[%d]: Unable to get proccessor domain ID for "
+                    "sg: 0x%x iid: 0x%x",
+                    status, info->subgraph_id, module_header.module_iid);
+                return status;
+            }
+
+            if (proc_domain_id != ACDB_HW_ACCEL_PROC_ID(info->proc_id))
+            {
+                //go to next parameter
+                cur_dot_offset += sizeof(uint32_t);
+                continue;
+            }
+        }
+
         if (info->should_check_hw_accel)
         {
             status = DataProcIsHwAccelParam(info->hw_accel_module_list_offset,
@@ -6750,6 +6780,7 @@ int32_t GetVcpmModuleParamPair(
     ChunkInfo ci_vcpm_cal_def = { 0 };
     AcdbHwAccelMemType mem_type = ACDB_HW_ACCEL_MEM_TYPE(vcpm_info->proc_id);
     AcdbIidRefCount *iid_ref = NULL;
+    uint32_t proc_domain_id = 0;
 
     if (IsNull(vcpm_info) || IsNull(id_pair) ||
         IsNull(param_info) || IsNull(rsp))
@@ -6771,6 +6802,28 @@ int32_t GetVcpmModuleParamPair(
     {
         ACDB_ERR("Error[%d]: Failed to read <iid, pid>.", status);
         return status;
+    }
+
+    if (vcpm_info->should_filter_cal_by_proc_domain)
+    {
+        status = DataProcGetProcDomainForModule(
+            vcpm_info->sg_mod_iid_map,
+            id_pair->module_iid,
+            &proc_domain_id);
+        if (AR_FAILED(status))
+        {
+            ACDB_ERR("Error[%d]: Unable to get proccessor domain ID for "
+                "sg: 0x%x iid: 0x%x",
+                status, vcpm_info->subgraph_id, id_pair->module_iid);
+            //return status;
+        }
+
+        if ((proc_domain_id != ACDB_HW_ACCEL_PROC_ID(vcpm_info->proc_id)) && AR_SUCCEEDED(status))
+        {
+            //go to next parameter
+            *should_skip_param = TRUE;
+            return AR_EOK;
+        }
     }
 
     if (vcpm_info->should_check_hw_accel)
@@ -7154,6 +7207,7 @@ int32_t GetVcpmOffloadedData(
     bool_t should_skip_param = FALSE;
     AcdbMiidPidPair id_pair = { 0 };
     AcdbVcpmParamInfo param_info = { 0 };
+    AcdbUintList datapool_offset_list = { 0 };
     AcdbVcpmOffloadedParamInfo *offloaded_param_info = NULL;
     if (IsNull(vcpm_info) || IsNull(rsp))
     {
@@ -7173,6 +7227,19 @@ int32_t GetVcpmOffloadedData(
         return AR_EBADPARAM;
     }
 
+    //keep track of data offsets
+    uint32_t offset_list_index = 0;
+    datapool_offset_list.count = vcpm_info->offloaded_param_info_list.length;
+    datapool_offset_list.list = (uint32_t*)ACDB_MALLOC(AcdbCalDefDataPoolPair, datapool_offset_list.count);
+
+    if (datapool_offset_list.list == NULL)
+    {
+        ACDB_ERR("Error[%d]: Failed allocate memory", AR_EFAILED);
+        goto end;
+    }
+
+    ar_mem_set(datapool_offset_list.list, 0, sizeof(AcdbCalDefDataPoolPair) * datapool_offset_list.count);
+
     vcpm_info->ignore_iid_list_update = TRUE;
 
     do
@@ -7180,25 +7247,52 @@ int32_t GetVcpmOffloadedData(
         offloaded_param_info =
             (AcdbVcpmOffloadedParamInfo*)opi_node->p_struct;
 
-        status = GetVcpmModuleParamPair(
-            vcpm_info, &id_pair, NULL, &should_skip_param, &param_info,
-            offloaded_param_info->file_offset_cal_def, rsp, total_cal_size);
-        if (AR_FAILED(status))
+        bool_t should_write_to_data_pool = TRUE;
+        AcdbCalDefDataPoolPair* offset_pair = NULL;
+
+        /* prevent writing the same payload multiple times in the data pool */
+        for (uint32_t i = 0; i < datapool_offset_list.count; i++)
         {
-            return status;
+            offset_pair = (AcdbCalDefDataPoolPair*)datapool_offset_list.list + i;
+            if (offloaded_param_info->file_offset_data_pool == offset_pair->file_offset_data_pool &&
+                offloaded_param_info->file_offset_cal_def == offset_pair->file_offset_cal_def)
+            {
+                should_write_to_data_pool = FALSE;
+                break;
+            }
         }
 
-        if (should_skip_param)
+        if (should_write_to_data_pool)
         {
-            continue;
+            //Add new entry
+            offset_pair = (AcdbCalDefDataPoolPair*)datapool_offset_list.list + offset_list_index;
+            offset_pair->file_offset_cal_def = offloaded_param_info->file_offset_cal_def;
+            offset_pair->file_offset_data_pool = offloaded_param_info->file_offset_data_pool;
+            offset_list_index++;
         }
 
-        offset_data_pool = offloaded_param_info->file_offset_data_pool;
-        status = GetVcpmParamPayload(vcpm_info, &id_pair, &param_info, TRUE,
+        if(should_write_to_data_pool)
+        {
+            status = GetVcpmModuleParamPair(
+                vcpm_info, &id_pair, NULL, &should_skip_param, &param_info,
+                offloaded_param_info->file_offset_cal_def, rsp, total_cal_size);
+            if (AR_FAILED(status))
+            {
+                goto end;
+            }
+
+            if (should_skip_param)
+            {
+                continue;
+            }
+
+            offset_data_pool = offloaded_param_info->file_offset_data_pool;
+            status = GetVcpmParamPayload(vcpm_info, &id_pair, &param_info, TRUE,
                 offset_data_pool, rsp);
-        if (AR_FAILED(status))
-        {
-            return status;
+            if (AR_FAILED(status))
+            {
+                goto end;
+            }
         }
 
         /* Update Param Info for offloaded param in the VCPM Subgraph
@@ -7215,6 +7309,8 @@ int32_t GetVcpmOffloadedData(
 
     } while (TRUE != AcdbListSetNext(&opi_node));
 
+end:
+    ACDB_FREE(datapool_offset_list.list);
     return status;
 }
 
@@ -8049,6 +8145,8 @@ int32_t AcdbGetSupbgraphCalPersist(
         vcpm_info.offset_vcpm_blob = sg_persist_cal_offset;
         vcpm_info.subgraph_id = info->subgraph_id;
         vcpm_info.proc_id = info->proc_id;
+        vcpm_info.should_filter_cal_by_proc_domain = info->should_filter_cal_by_proc_domain;
+        vcpm_info.sg_mod_iid_map = info->sg_mod_iid_map;
         vcpm_info.offloaded_param_list = info->offloaded_parameter_list;
         vcpm_info.should_check_hw_accel = info->should_check_hw_accel;
         vcpm_info.hw_accel_module_list_offset =
@@ -8500,6 +8598,7 @@ int32_t AcdbCmdGetProcSubgraphCalDataPersist(
     AcdbAudioCalContextInfo info;
     AcdbHwAccelMemType mem_type = ACDB_HW_ACCEL_MEM_DEFAULT;
     AcdbUintList subgraph_list = { 0 };
+    AcdbSubgraphPdmMap sg_mod_iid_map = { 0 };
 
     //mask out mem type
     //uint32_t proc_id_mask = 0x3FFFFFFF;
@@ -8533,6 +8632,8 @@ int32_t AcdbCmdGetProcSubgraphCalDataPersist(
 
     (void)ar_mem_set(&info, 0, sizeof(AcdbAudioCalContextInfo));
 
+    //we should filter calibration based on proc in this api
+    info.should_filter_cal_by_proc_domain = TRUE;
     rsp->num_sg_ids = 0;
 
     if (rsp->cal_data_size > 0 && !IsNull(rsp->cal_data))
@@ -8622,6 +8723,16 @@ int32_t AcdbCmdGetProcSubgraphCalDataPersist(
         info.hw_accel_module_list_offset =
             hw_accel_sg_info.module_list_offset;
 
+        
+        status = DataProcGetSubgraphProcIidMap(info.subgraph_id, &sg_mod_iid_map);
+        if (AR_EOK != status)
+        {
+            //Return even if it can't find data for one of the given subgraphs
+            goto end;
+        }
+
+        info.sg_mod_iid_map = &sg_mod_iid_map;
+
         status = AcdbGetSupbgraphCalPersist(
             &info, &blob_offset, rsp);
         if (status == AR_ENOTEXIST)
@@ -8636,6 +8747,8 @@ int32_t AcdbCmdGetProcSubgraphCalDataPersist(
 
         rsp->num_sg_ids++;
     }
+
+end:
 
     if (rsp->num_sg_ids == 0)
     {
@@ -11398,8 +11511,8 @@ int32_t GetAllAudioCKVVariations(AcdbKeyVectorLut *lookup,
         }
 
         ACDB_MEM_CPY_SAFE((uint8_t*)rsp->key_vector_list + *blob_offset,
-            num_keys * sizeof(AcdbKeyValuePair),
-            &num_keys, num_keys * sizeof(AcdbKeyValuePair));
+            sizeof(uint32_t),
+            &num_keys, sizeof(uint32_t));
         *blob_offset += sizeof(uint32_t);
 
         if (num_keys == 0) continue;

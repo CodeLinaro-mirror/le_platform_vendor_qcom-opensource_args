@@ -6,7 +6,7 @@
  *       state registration.
  *
  * \copyright
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -18,6 +18,7 @@
 #include "ar_osal_error.h"
 #include "ar_osal_log.h"
 #include "ar_osal_mem_op.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
@@ -342,23 +343,20 @@ ar_osal_servreg_t ar_osal_servreg_register(_In_ ar_osal_client_type  client_type
 #ifndef AR_OSAL_USE_PD_NOTIFIER
     return 1;
 #else
-    int32_t status = AR_EOK;
-    //ar_osal_servreg_t* handle = NULL;
+    char pd_service_name[AR_OSAL_SERVREG_NAME_LENGTH_MAX + 1];
     ar_osal_service_node* srv_reg_handle = NULL;
     enum pd_rcode pd_rc = PD_NOTIFIER_FAIL;
     pd_state state = SERVREG_NOTIF_SERVICE_STATE_DOWN_V01;
 
     if (NULL == domain || NULL == service || NULL == cb_func)
     {
-        status = AR_EBADPARAM;
+        AR_LOG_ERR(AR_OSAL_SERVREG_TAG, "Invalid input params");
         goto end;
     }
     srv_reg_handle = (ar_osal_service_node*)malloc(sizeof(ar_osal_service_node));
     if (!srv_reg_handle)
     {
-        status = AR_ENOMEMORY;
-        AR_LOG_ERR(AR_OSAL_SERVREG_TAG,
-         "handle allocation error status(%d)", status);
+        AR_LOG_ERR(AR_OSAL_SERVREG_TAG, "handle allocation failed");
         goto end;
     }
 
@@ -368,8 +366,9 @@ ar_osal_servreg_t ar_osal_servreg_register(_In_ ar_osal_client_type  client_type
 
     srv_reg_handle->cb_func = cb_func;
     srv_reg_handle->cb_context = cb_context;
+    snprintf(pd_service_name, sizeof(pd_service_name), "%s/%s", domain->name, service->name);
 
-    srv_reg_handle->pd_handle = pd_notifier_alloc(domain->name,
+    srv_reg_handle->pd_handle = pd_notifier_alloc(pd_service_name,
         AR_OSAL_SERVREG_CLIENT_NAME,
         domain->instance_id,
         ar_osal_pd_notifier_cb,
@@ -377,8 +376,7 @@ ar_osal_servreg_t ar_osal_servreg_register(_In_ ar_osal_client_type  client_type
 
     if (!srv_reg_handle->pd_handle)
     {
-        status = AR_EFAILED;
-        AR_LOG_ERR(AR_OSAL_SERVREG_TAG, "pd_notifier_alloc error status(%d)", status);
+        AR_LOG_ERR(AR_OSAL_SERVREG_TAG, "pd_notifier_alloc failed");
         free(srv_reg_handle);
         srv_reg_handle = NULL;
         goto end;
@@ -387,10 +385,8 @@ ar_osal_servreg_t ar_osal_servreg_register(_In_ ar_osal_client_type  client_type
     pd_rc = pd_notifier_register(srv_reg_handle->pd_handle, &state);
 
     if (pd_rc != PD_NOTIFIER_SUCCESS) {
-        status = AR_EFAILED;
-        AR_LOG_ERR(AR_OSAL_SERVREG_TAG, "pd_notifier_register error: status(%d)"
-            "pd_notifier status(%d)",
-            status, pd_rc );
+        AR_LOG_ERR(AR_OSAL_SERVREG_TAG, "pd_notifier_register failed for %s, status(%d)",
+            pd_service_name, pd_rc);
         pd_notifier_free(srv_reg_handle->pd_handle);
         free(srv_reg_handle);
         srv_reg_handle = NULL;
@@ -398,7 +394,8 @@ ar_osal_servreg_t ar_osal_servreg_register(_In_ ar_osal_client_type  client_type
     }
     else {
         AR_LOG_INFO(AR_OSAL_SERVREG_TAG,
-            "Successfully registered.  Curr state is %s state (0x%08x)",
+            "Successfully registered %s.  Curr state is %s state (0x%08x)",
+            pd_service_name,
             (state == EVENT_PD_UNKNOWN) ? "unknown" :
             ((state == EVENT_PD_UP) ? "up" :
             ((state == EVENT_PD_DOWN) ? "down" : "out of range")),

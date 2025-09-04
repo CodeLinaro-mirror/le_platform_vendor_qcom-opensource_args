@@ -34,6 +34,7 @@
 #include "ats_i.h"
 #include "ats_online.h"
 #include "ats_rtc.h"
+#include "ats_dls.h"
 #include "ats_fts.h"
 #include "ats_mcs.h"
 #include "ats_adie_rtc.h"
@@ -199,6 +200,14 @@ int32_t ats_init(void)
 		ATS_ERR("Error[%d]: Failed to initialize "
 			"Realtime Calibration service", service_status);
 		goto core_service_deinit;
+	}
+
+	service_status = ats_dls_init(ats_transport_dls_send_callback);
+	if (AR_FAILED(service_status))
+	{
+		ATS_ERR("Error[%d]: Failed to initialize "
+			"Data Logging Service", service_status);
+		ats_dls_deinit();
 	}
 
 	service_status = ats_mcs_init();
@@ -385,6 +394,7 @@ void ats_execute_command(uint8_t *req_buf_ptr,
     switch (service_id)
     {
     case ATS_RTC_SERVICE_ID:
+    case ATS_DLS_SERVICE_ID:
     case ATS_FTS_SERVICE_ID:
     case ATS_MCS_SERVICE_ID:
     case ATS_CODEC_RTC_SERVICE_ID:
@@ -485,6 +495,7 @@ int32_t ats_register_service(uint32_t service_id,
 	int32_t result = AR_EOK;
 
 	if ((service_id != ATS_RTC_SERVICE_ID) &&
+		(service_id != ATS_DLS_SERVICE_ID) &&
 		(service_id != ATS_FTS_SERVICE_ID) &&
 		(service_id != ATS_MCS_SERVICE_ID) &&
         (service_id != ATS_CODEC_RTC_SERVICE_ID)&&
@@ -562,6 +573,9 @@ int32_t ats_register_service(uint32_t service_id,
 			break;
         case ATS_RTC_SERVICE_ID:
             ATS_INFO("Realtime Calibration service registered with ATS");
+            break;
+        case ATS_DLS_SERVICE_ID:
+            ATS_INFO("Data Logging service registered with ATS");
             break;
 		default:
             ATS_INFO("Unknown service registered with ATS");
@@ -672,6 +686,9 @@ int32_t ats_deregister_service(uint32_t service_id
         case ATS_RTC_SERVICE_ID:
             ATS_DBG("Deregistering Realtime Calibration service");
             break;
+        case ATS_DLS_SERVICE_ID:
+            ATS_DBG("Deregistering Data Logging service");
+            break;
         default:
             ATS_DBG("Deregistering unknown service");
             break;
@@ -709,6 +726,13 @@ int32_t ats_get_service_info(AtsCmdGetServiceInfoRsp *svc_info_rsp, uint32_t rsp
         {
             svc_info.major = ATS_RTC_MAJOR_VERSION;
             svc_info.minor = ATS_RTC_MINOR_VERSION;
+            found = TRUE;
+            break;
+        }
+        case ATS_DLS_SERVICE_ID:
+        {
+            svc_info.major = ATS_DLS_MAJOR_VERSION;
+            svc_info.minor = ATS_DLS_MINOR_VERSION;
             found = TRUE;
             break;
         }

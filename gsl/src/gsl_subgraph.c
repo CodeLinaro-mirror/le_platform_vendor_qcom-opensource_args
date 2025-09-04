@@ -5,7 +5,7 @@
  *      Represents a single sub-graph
  *
  * \copyright
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 #include "gsl_subgraph.h"
@@ -34,7 +34,9 @@ uint32_t gsl_subgraph_init(struct gsl_subgraph *sg, uint32_t sg_id)
 	sg->stop_ref_cnt = 0;
 	sg->sg_id = sg_id;
 
-	gsl_memset(&sg->persist_cal_data, 0, sizeof(sg->persist_cal_data));
+	for (int i = 0; i < AR_SUB_SYS_ID_LAST; i++) {
+		gsl_memset(&sg->persist_cal_data_per_proc[i].persist_cal_data, 0, sizeof(sg->persist_cal_data_per_proc[i].persist_cal_data));
+	}
 	gsl_memset(&sg->user_persist_cfg_data, 0,
 		sizeof(sg->user_persist_cfg_data));
 
@@ -170,10 +172,9 @@ uint32_t gsl_subgraph_remove_children(struct gsl_subgraph *sg,
 
 int32_t gsl_subgraph_query_persist_cal_by_mem(struct gsl_subgraph *sg_obj,
 	const struct gsl_key_vector *ckv, const	AcdbHwAccelMemType mem_type,
-	uint32_t master_proc)
+	uint32_t master_proc, uint32_t persist_cal_idx)
 {
 	/* used for grabbing data differentiated on hw accel/not */
-	/* proc ID is not used right now by ACDB */
 	AcdbProcSubgraphPersistCalReq cmd_struct;
 	AcdbSgIdPersistCalData rsp_struct;
 	int32_t rc = AR_EOK;
@@ -183,9 +184,13 @@ int32_t gsl_subgraph_query_persist_cal_by_mem(struct gsl_subgraph *sg_obj,
 	if (!sg_obj || !ckv)
 		return AR_EBADPARAM;
 
+         if (persist_cal_idx < 0 || persist_cal_idx > sg_obj->num_proc_ids)
+		return AR_EBADPARAM;
+
 	sg_pair.subgraph_id = sg_obj->sg_id;
-	sg_pair.proc_id = ACDB_HW_ACCEL_MEM_TYPE_MASK(0, mem_type);
-	/* just the mem type, no proc ID: don't care here nor does ACDB. */
+	sg_pair.proc_id = ACDB_HW_ACCEL_MEM_TYPE_MASK(
+		sg_obj->persist_cal_data_per_proc[persist_cal_idx].proc_id, mem_type);
+	/* actual proc_id where persist_cal needs to be applied. */
 
 	cmd_struct.num_subgraphs = 1;
 	cmd_struct.subgraph_list = &sg_pair;
@@ -230,21 +235,21 @@ int32_t gsl_subgraph_query_persist_cal_by_mem(struct gsl_subgraph *sg_obj,
 
 	if (mem_type == ACDB_HW_ACCEL_MEM_DEFAULT) {
 		/* reuse existing allocation if at all possible */
-		if (sg_obj->persist_cal_data.v_addr == NULL ||
-			sg_obj->persist_cal_data_size != rsp_struct.cal_data_size) {
+		if (sg_obj->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr == NULL ||
+			sg_obj->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data_size != rsp_struct.cal_data_size) {
 
-			if (sg_obj->persist_cal_data.v_addr != NULL)
-				gsl_shmem_free(&sg_obj->persist_cal_data);
+			if (sg_obj->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr != NULL)
+				gsl_shmem_free(&sg_obj->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data);
 
 			rc = gsl_shmem_alloc_ext(rsp_struct.cal_data_size, sg_ss_mask, 0, 0,
-				master_proc, &sg_obj->persist_cal_data);
+				master_proc, &sg_obj->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data);
 			if (rc) {
 				GSL_ERR("shmem alloc failed %d", rc);
 				goto exit;
 			}
 		}
-		sg_obj->persist_cal_data_size = rsp_struct.cal_data_size;
-		rsp_struct.cal_data = sg_obj->persist_cal_data.v_addr;
+		sg_obj->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data_size = rsp_struct.cal_data_size;
+		rsp_struct.cal_data = sg_obj->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr;
 	} else {
 		/* do not re-use cma allocations */
 		if (sg_obj->cma_persist_cfg_data.v_addr != NULL) {
@@ -276,13 +281,17 @@ exit:
 
 int32_t gsl_subgraph_set_persist_cal(struct gsl_subgraph *sg,
 	uint8_t *persistent_cal, uint32_t persistent_cal_sz,
-	uint32_t master_proc)
+	uint32_t master_proc, uint32_t persist_cal_idx)
 {
 	int32_t rc = AR_EOK;
 	uint32_t sg_ss_mask;
 
 	if (!sg || !persistent_cal)
 		return AR_EBADPARAM;
+
+        if (persist_cal_idx < 0 || persist_cal_idx > sg->num_proc_ids)
+		return AR_EBADPARAM;
+
 
 	rc = gsl_mdf_utils_query_graph_ss_mask(&sg->sg_id, 1, &sg_ss_mask);
 	if (rc) {
@@ -291,22 +300,22 @@ int32_t gsl_subgraph_set_persist_cal(struct gsl_subgraph *sg,
 	}
 
 	/* try to use existing allocation if at all possible */
-	if (sg->persist_cal_data.v_addr != NULL &&
-		sg->persist_cal_data_size < persistent_cal_sz) {
-		gsl_shmem_free(&sg->persist_cal_data);
+	if (sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr != NULL &&
+		sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data_size < persistent_cal_sz) {
+		gsl_shmem_free(&sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data);
 
 		rc = gsl_shmem_alloc_ext(persistent_cal_sz +
 			sizeof(AcdbSgIdPersistData), sg_ss_mask, 0, 0,
-			master_proc, &sg->persist_cal_data);
+			master_proc, &sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data);
 		if (rc) {
 			GSL_ERR("shmem alloc failed %d", rc);
 			goto exit;
 		}
 	}
 
-	sg->persist_cal_data_size = persistent_cal_sz +
+	sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data_size = persistent_cal_sz +
 		sizeof(AcdbSgIdPersistData);
-	gsl_memcpy((uint8_t *)sg->persist_cal_data.v_addr +
+	gsl_memcpy((uint8_t *)sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr +
 		sizeof(AcdbSgIdPersistData), persistent_cal_sz, persistent_cal,
 		persistent_cal_sz);
 

@@ -5,7 +5,7 @@
  *      Implement GSL RTC functionalities
  *
  * \copyright
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
@@ -214,8 +214,6 @@ int32_t gsl_rtc_graph_get_persist_data(struct gsl_graph *graph, uint32_t sgid,
 {
 	struct gsl_subgraph *sg;
 
-	(void) proc_id; //reference unused variable to stop warning
-
 	sg = gsl_graph_get_sg_ptr(graph, sgid);
 	if (!sg) {
 		GSL_ERR("no subgraph with sgid 0x%x", sgid);
@@ -224,10 +222,13 @@ int32_t gsl_rtc_graph_get_persist_data(struct gsl_graph *graph, uint32_t sgid,
 	if (!total_size || !sg_cal_data)
 		return AR_EFAILED;
 
-	if (sg->persist_cal_data.v_addr)
-		*sg_cal_data = sg->persist_cal_data.v_addr;
-
-	*total_size = sg->persist_cal_data_size;
+	for (int persist_cal_idx = 0; persist_cal_idx < sg->num_proc_ids; persist_cal_idx++) {
+		if (sg->persist_cal_data_per_proc[persist_cal_idx].proc_id == proc_id) {
+			if (sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr)
+				*sg_cal_data = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr;
+			*total_size = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data_size;
+		}
+	}
 
 	return AR_EOK;
 }
@@ -363,90 +364,98 @@ int32_t gsl_rtc_graph_set_persist_data(struct gsl_graph *graph,
 	if (!graph)
 		return AR_EFAILED;
 	sg = gsl_graph_get_sg_ptr(graph, params->sgid);
-	if (!sg || !sg->persist_cal_data.v_addr)
+	if (!sg)
 		return AR_EFAILED;
+	GSL_DBG("num procs per SG - %d", sg->num_proc_ids);
+	for (int persist_cal_idx = 0; persist_cal_idx < sg->num_proc_ids; persist_cal_idx++) {
+		if (sg->persist_cal_data_per_proc[persist_cal_idx].proc_id == params->proc_id) {
+			if (!sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr)
+				return AR_EFAILED;
 
-	rc = gsl_allocate_gpr_packet(APM_CMD_DEREGISTER_CFG,
-		rtc_internal_ctxt.src_port, APM_MODULE_INSTANCE_ID,
-		sizeof(*cmd_header), 0, graph->proc_id, &send_pkt);
-	if (rc) {
-		GSL_ERR("Failed to allocate GPR packet %d", rc);
-		goto exit;
-	}
-	/*
-	 * below offset used to skip acdb header before sending data to
-	 * spf
-	 */
-	cal_paddr_w_offset = sg->persist_cal_data.spf_addr +
-		sizeof(AcdbSgIdPersistData);
-	cmd_header = GPR_PKT_GET_PAYLOAD(apm_cmd_header_t, send_pkt);
-	cmd_header->mem_map_handle = sg->persist_cal_data.spf_mmap_handle;
-	cmd_header->payload_address_lsw = (uint32_t)cal_paddr_w_offset;
-	cmd_header->payload_address_msw = (uint32_t)(cal_paddr_w_offset >> 32);
-	cmd_header->payload_size = sg->persist_cal_data_size -
-		sizeof(AcdbSgIdPersistData);
+			GSL_DBG("proc_id[%d] - %d", persist_cal_idx, sg->persist_cal_data_per_proc[persist_cal_idx].proc_id);
 
-	GSL_LOG_PKT("send_pkt", rtc_internal_ctxt.src_port, send_pkt,
-		sizeof(*send_pkt) + sizeof(*cmd_header), sg->persist_cal_data.v_addr,
-		cmd_header->payload_size);
+			rc = gsl_allocate_gpr_packet(APM_CMD_DEREGISTER_CFG,
+				rtc_internal_ctxt.src_port, APM_MODULE_INSTANCE_ID,
+				sizeof(*cmd_header), 0, graph->proc_id, &send_pkt);
+			if (rc) {
+				GSL_ERR("Failed to allocate GPR packet %d", rc);
+				goto exit;
+			}
+			/*
+			* below offset used to skip acdb header before sending data to
+			* spf
+			*/
+			cal_paddr_w_offset = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.spf_addr +
+				sizeof(AcdbSgIdPersistData);
+			cmd_header = GPR_PKT_GET_PAYLOAD(apm_cmd_header_t, send_pkt);
+			cmd_header->mem_map_handle = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.spf_mmap_handle;
+			cmd_header->payload_address_lsw = (uint32_t)cal_paddr_w_offset;
+			cmd_header->payload_address_msw = (uint32_t)(cal_paddr_w_offset >> 32);
+			cmd_header->payload_size = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data_size -
+				sizeof(AcdbSgIdPersistData);
 
-	rc = gsl_send_spf_cmd_wait_for_basic_rsp(&send_pkt,
-		&rtc_internal_ctxt.sig);
-	if (rc) {
-		GSL_ERR("Graph deregister cfg cmd 0x%x failure:%d",
-			APM_CMD_DEREGISTER_CFG, rc);
-		return rc;
-	}
+			GSL_LOG_PKT("send_pkt", rtc_internal_ctxt.src_port, send_pkt,
+				sizeof(*send_pkt) + sizeof(*cmd_header), sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr,
+				cmd_header->payload_size);
 
-	/* if user did not pass data, then read from acdb */
-	if (!params->sg_cal_data) {
-		rc = gsl_subgraph_query_persist_cal_by_mem(sg,
-			(struct gsl_key_vector *)params->ckv, ACDB_HW_ACCEL_MEM_DEFAULT,
-			graph->proc_id);
-		if (rc) {
-			GSL_ERR("Failed to query persist cal %d", rc);
-			goto exit;
+			rc = gsl_send_spf_cmd_wait_for_basic_rsp(&send_pkt,
+				&rtc_internal_ctxt.sig);
+			if (rc) {
+				GSL_ERR("Graph deregister cfg cmd 0x%x failure:%d",
+					APM_CMD_DEREGISTER_CFG, rc);
+				return rc;
+			}
+
+			/* if user did not pass data, then read from acdb */
+			if (!params->sg_cal_data) {
+				rc = gsl_subgraph_query_persist_cal_by_mem(sg,
+					(struct gsl_key_vector *)params->ckv, ACDB_HW_ACCEL_MEM_DEFAULT,
+					graph->proc_id, persist_cal_idx);
+				if (rc) {
+					GSL_ERR("Failed to query persist cal %d", rc);
+					goto exit;
+				}
+			} else {
+				rc = gsl_subgraph_set_persist_cal(sg, params->sg_cal_data,
+					*params->total_size, graph->proc_id, persist_cal_idx);
+				if (rc) {
+					GSL_ERR("Failed to set persist cal %d", rc);
+					goto exit;
+				}
+			}
+
+			rc = gsl_allocate_gpr_packet(APM_CMD_REGISTER_CFG,
+				rtc_internal_ctxt.src_port, APM_MODULE_INSTANCE_ID,
+				sizeof(*cmd_header), 0, graph->proc_id, &send_pkt);
+			if (rc) {
+				GSL_ERR("Failed to allocate GPR packet %d", rc);
+				goto exit;
+			}
+			/*
+			* below offset used to skip acdb header before sending data to
+			* spf
+			*/
+			cal_paddr_w_offset = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.spf_addr +
+				sizeof(AcdbSgIdPersistData);
+
+			cmd_header = GPR_PKT_GET_PAYLOAD(apm_cmd_header_t, send_pkt);
+			cmd_header->mem_map_handle = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.spf_mmap_handle;
+			cmd_header->payload_address_lsw = (uint32_t)cal_paddr_w_offset;
+			cmd_header->payload_address_msw = (uint32_t)(cal_paddr_w_offset >> 32);
+			cmd_header->payload_size = sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data_size -
+				sizeof(AcdbSgIdPersistData);
+
+			GSL_LOG_PKT("send_pkt", rtc_internal_ctxt.src_port, send_pkt,
+				sizeof(*send_pkt) + sizeof(*cmd_header), sg->persist_cal_data_per_proc[persist_cal_idx].persist_cal_data.v_addr,
+				cmd_header->payload_size);
+
+			rc = gsl_send_spf_cmd_wait_for_basic_rsp(&send_pkt,
+				&rtc_internal_ctxt.sig);
+			if (rc)
+				GSL_ERR("Graph register cfg cmd 0x%x failure:%d",
+					APM_CMD_REGISTER_CFG, rc);
 		}
-	} else {
-		rc = gsl_subgraph_set_persist_cal(sg, params->sg_cal_data,
-			*params->total_size, graph->proc_id);
-		if (rc) {
-			GSL_ERR("Failed to set persist cal %d", rc);
-			goto exit;
-		}
 	}
-
-	rc = gsl_allocate_gpr_packet(APM_CMD_REGISTER_CFG,
-		rtc_internal_ctxt.src_port, APM_MODULE_INSTANCE_ID,
-		sizeof(*cmd_header), 0, graph->proc_id, &send_pkt);
-	if (rc) {
-		GSL_ERR("Failed to allocate GPR packet %d", rc);
-		goto exit;
-	}
-	/*
-	 * below offset used to skip acdb header before sending data to
-	 * spf
-	 */
-	cal_paddr_w_offset = sg->persist_cal_data.spf_addr +
-		sizeof(AcdbSgIdPersistData);
-
-	cmd_header = GPR_PKT_GET_PAYLOAD(apm_cmd_header_t, send_pkt);
-	cmd_header->mem_map_handle = sg->persist_cal_data.spf_mmap_handle;
-	cmd_header->payload_address_lsw = (uint32_t)cal_paddr_w_offset;
-	cmd_header->payload_address_msw = (uint32_t)(cal_paddr_w_offset >> 32);
-	cmd_header->payload_size = sg->persist_cal_data_size -
-		sizeof(AcdbSgIdPersistData);
-
-	GSL_LOG_PKT("send_pkt", rtc_internal_ctxt.src_port, send_pkt,
-		sizeof(*send_pkt) + sizeof(*cmd_header), sg->persist_cal_data.v_addr,
-		cmd_header->payload_size);
-
-	rc = gsl_send_spf_cmd_wait_for_basic_rsp(&send_pkt,
-		&rtc_internal_ctxt.sig);
-	if (rc)
-		GSL_ERR("Graph register cfg cmd 0x%x failure:%d",
-			APM_CMD_REGISTER_CFG, rc);
-
 exit:
 	return rc;
 }
