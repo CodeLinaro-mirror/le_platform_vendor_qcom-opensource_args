@@ -79,7 +79,9 @@ AM_CONDITIONAL([USES_ATS_TRANSPORT_TCPIP], [test "x${with_ats_transport_tcp_ip}"
 
 AC_ARG_WITH([dummy_diag],
       AC_HELP_STRING([--with-dummy_diag],
-         [use dummy diag instead of libdiag]))
+         [use dummy diag instead of libdiag (default is yes)]),
+         [with_dummy_diag=$withval],
+         [with_dummy_diag=yes])
 
 if (test "x${with_dummy_diag}" = "xno"); then
         PKG_CHECK_MODULES([DIAG], [diag])
