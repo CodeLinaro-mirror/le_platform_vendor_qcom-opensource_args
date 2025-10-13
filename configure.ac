@@ -105,6 +105,12 @@ if (test "x${with_libion}" = "xyes"); then
     AC_SUBST([LIBION_CFLAGS])
 fi
 
+AC_ARG_WITH([modem_ssr_support],
+    AS_HELP_STRING([use modem_ssr_support (default is no)]),
+    [with_modem_ssr_support=$withval],
+    [with_modem_ssr_support=no])
+AM_CONDITIONAL([AR_OSAL_USE_MODEM_SSR], [test "x${with_modem_ssr_support}" = "xyes"])
+
 AM_CONDITIONAL([LIBION_SUPPORTED], [test "x${with_libion}" = "xyes"])
 
 AC_CHECK_FUNCS([strlcpy])

@@ -38,6 +38,9 @@ osal_c_sources = ./src/linux/ar_osal_file_io.c \
                  ./src/linux/qcom/ar_osal_servreg.c \
                  ./src/linux/qcom/dyn_pd/ar_osal_dyn_pd.c
 
+if AR_OSAL_USE_MODEM_SSR
+AM_CFLAGS += -DAR_OSAL_USE_MODEM_SSR
+endif
 
 if ARGS_VENDOR_QCOM
 if AUDIO_DMA_SUPPORT
