@@ -90,9 +90,16 @@ int32_t acdb_parser_get_chunk(
 
         header = (acdb_chunk_header_t*)start_ptr;
 
+        // Check for invalid chunk header
+        if (header->id == 0) {
+            status = AR_EFAILED;
+            break;
+        }
+
         uint8_t* next_chunk = start_ptr + sizeof(acdb_chunk_header_t) + header->size;
-        if (next_chunk > end_ptr || header->size == 0)
-        {
+
+        // Check for overflow with non-zero sized chunks
+        if (next_chunk > end_ptr) {
             status = AR_EFAILED;
             break;
         }
