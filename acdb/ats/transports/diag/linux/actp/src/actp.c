@@ -16,8 +16,8 @@
 *       func(char_t*, uint32_t, char_t**, uint32_t*)
 *
 * \copyright
-*  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*  SPDX-License-Identifier: BSD-3-Clause-Clear
+* Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+* SPDX-License-Identifier: BSD-3-Clause-Clear
 *
 *==============================================================================
 */
@@ -28,7 +28,7 @@
 #include "audtp.h"
 #include "actp.h"
 
-#ifdef __INTEGRITY
+#if defined(__INTEGRITY) || defined(PLATFORM_LY)
 #include "Diag_LSM.h"
 #else
 #include "diag_lsm.h"
