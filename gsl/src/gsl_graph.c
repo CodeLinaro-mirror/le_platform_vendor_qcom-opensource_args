@@ -4018,6 +4018,7 @@ static int32_t gsl_graph_cache_datapath_miid(struct gsl_graph *graph,
 	dp_info->cached_tag = tag;
 	dp_info->master_proc_id =
 		proc_module_info->proc_module_list->proc_domain_id;
+	dp_info->module_id = proc_module_info->proc_module_list->module_entry[0].module_id;
 
 free_module_info:
 	gsl_mem_free(proc_module_info->proc_module_list);

@@ -566,9 +566,10 @@ void gsl_handle_hpcm_buff_done(struct gsl_graph *graph, gpr_packet_t *packet, vo
 	}
 
 	if (!dp_info){
-        GSL_ERR("Unable to appropriate RD/WR datapath");
-        goto exit;
+		GSL_ERR("Unable to appropriate RD/WR datapath");
+		goto exit;
 	}
+
 	data_mode = dp_info->config.attributes & GSL_ATTRIBUTES_DATA_MODE_MASK;
 
 	if (data_mode == GSL_DATA_MODE_BLOCKING) {
@@ -2716,9 +2717,14 @@ int32_t gsl_dp_queue_read_buffers_to_spf(struct gsl_data_path_info *dp_info)
 							dp_info->config.max_metadata_size;
 					}
 				}
-
-				gsl_dp_read_shmem(dp_info, internal_buff,
-					internal_md_buf, 0,	dp_info->config.buff_size, i);
+				if (dp_info->module_id == MODULE_ID_HPCM) {
+					GSL_VERBOSE("Queuing Initial Read buffers for HPCM");
+					gsl_hpcm_data_buf_cfg(dp_info, internal_buff, 0, dp_info->config.buff_size,
+							i, GSL_DATA_DIR_READ, 0);
+				} else {
+					gsl_dp_read_shmem(dp_info, internal_buff,
+						internal_md_buf, 0, dp_info->config.buff_size, i);
+				}
 			}
 		}
 	}
