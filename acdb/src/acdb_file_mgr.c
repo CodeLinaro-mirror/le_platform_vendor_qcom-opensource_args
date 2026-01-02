@@ -1814,8 +1814,12 @@ int32_t acdb_fm_read_db_mem(acdb_file_man_handle_t handle,
 
     buffer_ptr += *offset;
 
-    if (*offset + read_size > db->database_cache_size)
+    if ((*offset >= db->database_cache_size) ||
+        (read_size > (db->database_cache_size - *offset)))
     {
+        ACDB_ERR("Error[%d]: offset[%u] readsize[%zu] database_cache_size[%u] "
+                "read beyond database cache bounds", AR_EBADPARAM, *offset,
+                read_size, db->database_cache_size);
         return AR_EBADPARAM;
     }
 
@@ -1838,8 +1842,12 @@ int32_t acdb_fm_get_db_mem_ptr(acdb_file_man_handle_t handle,
 
     db = (AcdbFileManDatabaseInfo*)handle;
 
-    if (*offset + data_size > db->database_cache_size)
+    if ((*offset >= db->database_cache_size) ||
+        (data_size > (db->database_cache_size - *offset)))
     {
+        ACDB_ERR("Error[%d]: offset[%u] datasize[%zu] database_cache_size[%u] "
+                "read beyond database cache bounds", AR_EBADPARAM, *offset,
+                data_size, db->database_cache_size);
         return AR_EBADPARAM;
     }
 
