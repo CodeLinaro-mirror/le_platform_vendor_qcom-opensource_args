@@ -15,7 +15,7 @@
 
 #define AR_OSAL_SHMEM_LOG_TAG "AROSH"
 #define AR_OSAL_SHMEM_ALIGNMENT 4096
-#define MDF_MEM_BASE_ADDR 0xAE000000
+#define MDF_MEM_BASE_ADDR 0xD4E00000 /*why is this hardcoded?? changed*/
 #define MDF_MEM_SIZE_TOTAL 16 * 1024 * 1024  /* 16MB contiguous mem reserved */
 
 static void *mdf_mem_base_phy_addr = NULL;
@@ -59,13 +59,16 @@ static int32_t ar_shmem_validate_sys_id(uint8_t num_sys_id, ar_shmem_proc_info* 
         AR_MODEM_DSP != sys_id[i].proc_id &&
         AR_SENSOR_DSP != sys_id[i].proc_id &&
         AR_COMPUTE_DSP != sys_id[i].proc_id &&
-        AR_APSS != sys_id[i].proc_id)
+        AR_APSS != sys_id[i].proc_id &&
+        AR_AUDIO_DSP1 != sys_id[i].proc_id &&
+        AR_AUDIO_DSP2 != sys_id[i].proc_id)
     {
       rc = AR_EBADPARAM;
       break;
     }
 
-    if (AR_MODEM_DSP == sys_id[i].proc_id || AR_SENSOR_DSP == sys_id[i].proc_id)
+    if (AR_MODEM_DSP == sys_id[i].proc_id || AR_SENSOR_DSP == sys_id[i].proc_id ||
+        AR_AUDIO_DSP1 == sys_id[i].proc_id || AR_AUDIO_DSP2 == sys_id[i].proc_id )
     {
      AR_LOG_ERR(AR_OSAL_SHMEM_LOG_TAG, "mdf mode set");
     *is_mdf = TRUE;
