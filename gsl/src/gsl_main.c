@@ -1038,7 +1038,7 @@ int32_t gsl_init(struct gsl_init_data *init_data)
 			goto mdf_utils_deinit;
 		}
 		/* @TODO: Remove below code once we rely on UP notifications from Spf */
-		gsl_spf_ss_state_set(master_procs[i], AR_SUB_SYS_IDS_MASK,
+		gsl_spf_ss_state_set(master_procs[i], GSL_GET_SPF_SS_MASK(AR_AUDIO_DSP1) | GSL_GET_SPF_SS_MASK(AR_AUDIO_DSP2) | 0x3F,
 					//GSL_GET_SPF_SS_MASK(master_procs[i]),
 					GSL_SPF_SS_STATE_UP);
 	}
