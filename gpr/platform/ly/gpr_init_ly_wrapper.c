@@ -31,7 +31,9 @@ static struct ipc_dl_t gpr_ipc_dl_table[GPR_PL_NUM_TOTAL_DOMAINS_V]= {
   {GPR_IDS_DOMAIN_ID_APPS_V,ipc_dl_local_init,ipc_dl_local_deinit},
   {GPR_IDS_DOMAIN_ID_SDSP_V,ipc_dl_glink_init, ipc_dl_glink_deinit},
   {GPR_IDS_DOMAIN_ID_GDSP0_V,ipc_dl_glink_init,ipc_dl_glink_deinit},
-  {GPR_IDS_DOMAIN_ID_GDSP1_V,ipc_dl_glink_init,ipc_dl_glink_deinit}
+  {GPR_IDS_DOMAIN_ID_GDSP1_V,ipc_dl_glink_init,ipc_dl_glink_deinit},
+  {GPR_IDS_DOMAIN_ID_ADSP1_V, ipc_dl_glink_init, ipc_dl_glink_deinit},
+  {GPR_IDS_DOMAIN_ID_ADSP2_V, ipc_dl_glink_init, ipc_dl_glink_deinit}
 };
 
 /*****************************************************************************

@@ -33,8 +33,11 @@
 #define GPR_IPC_SDSP_CDSP_PORT_NAME  ("sdsp_cdsp")
 #define GPR_IPC_GDSP0_APPS_PORT_NAME ("gdsp0_apps")
 #define GPR_IPC_GDSP1_APPS_PORT_NAME ("gdsp1_apps")
+#define GPR_IPC_ADSP1_ADSP2_PORT_NAME  ("adsp1_adsp2")
+#define GPR_IPC_ADSP1_ADSP0_PORT_NAME  ("adsp_adsp1")
+ #define GPR_IPC_ADSP2_ADSP0_PORT_NAME  ("adsp_adsp2")
 
-#define GPR_GLINK_PORT_PAIRS (12 + 1) // Add supported entries only. Update the size as neeeded.
+#define GPR_GLINK_PORT_PAIRS (17 + 1) // Add supported entries only. Update the size as neeeded.
 
 /******************************************************************************
  * Variables                                                              *
@@ -42,6 +45,8 @@
 /* Glink related port data for all domains
  * Each entry in the table corresponds to one domain id pair so totally num_domain*num_domain entries*/
 static gpr_glink_port_info_t glink_port_data_cmn[GPR_GLINK_PORT_PAIRS] = {
+    { GPR_IDS_DOMAIN_ID_ADSP_V, GPR_REMOTE_SS_ADSP0, GPR_IDS_DOMAIN_ID_APPS_V,     GPR_REMOTE_SS_APPS,     GPR_IPC_ADSP_APPS_PORT_NAME},
+    { GPR_IDS_DOMAIN_ID_ADSP_V, GPR_REMOTE_SS_ADSP0, GPR_IDS_DOMAIN_ID_APPS2_V,    GPR_REMOTE_SS_APPS,     GPR_IPC_ADSP_APPS_PORT_NAME},
     { GPR_IDS_DOMAIN_ID_ADSP_V, GPR_REMOTE_SS_ADSP0, GPR_IDS_DOMAIN_ID_APPS_V,     GPR_REMOTE_SS_APPS,     GPR_IPC_ADSP_APPS_PORT_NAME},
     { GPR_IDS_DOMAIN_ID_ADSP_V, GPR_REMOTE_SS_ADSP0, GPR_IDS_DOMAIN_ID_MODEM_V,    GPR_REMOTE_SS_MODEM,    GPR_IPC_ADSP_MODEM_PORT_NAME},
     { GPR_IDS_DOMAIN_ID_ADSP_V, GPR_REMOTE_SS_ADSP0, GPR_IDS_DOMAIN_ID_SDSP_V,     GPR_REMOTE_SS_SDSP,     GPR_IPC_ADSP_SDSP_PORT_NAME},
@@ -55,6 +60,7 @@ static gpr_glink_port_info_t glink_port_data_cmn[GPR_GLINK_PORT_PAIRS] = {
     { GPR_IDS_DOMAIN_ID_GDSP0_V,GPR_REMOTE_SS_GDSP0, GPR_IDS_DOMAIN_ID_APPS_V,     GPR_REMOTE_SS_APPS,     GPR_IPC_GDSP0_APPS_PORT_NAME},
     { GPR_IDS_DOMAIN_ID_GDSP1_V,GPR_REMOTE_SS_GDSP1, GPR_IDS_DOMAIN_ID_APPS_V,     GPR_REMOTE_SS_APPS,     GPR_IPC_GDSP1_APPS_PORT_NAME},
     { GPR_IDS_DOMAIN_ID_ADSP1_V,GPR_REMOTE_SS_ADSP1, GPR_IDS_DOMAIN_ID_APPS_V,     GPR_REMOTE_SS_APPS,     GPR_IPC_ADSP1_APPS_PORT_NAME},
+    { GPR_IDS_DOMAIN_ID_ADSP1_V,GPR_REMOTE_SS_ADSP1, GPR_IDS_DOMAIN_ID_ADSP2_V,    GPR_REMOTE_SS_ADSP2,    GPR_IPC_ADSP1_ADSP2_PORT_NAME},
     { GPR_IDS_DOMAIN_ID_ADSP2_V,GPR_REMOTE_SS_ADSP2, GPR_IDS_DOMAIN_ID_APPS_V,     GPR_REMOTE_SS_APPS,     GPR_IPC_ADSP2_APPS_PORT_NAME}
  };
 
