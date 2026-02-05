@@ -504,10 +504,8 @@ GPR_INTERNAL uint32_t gpr_glink_init(uint32_t src_domain_id, uint32_t dest_domai
       AR_MSG(DBG_HIGH_PRIO, "%d", gpr_glink_port_pool[dest_domain_id].port_name[c]);
       c++;
    }
-   AR_MSG(DBG_HIGH_PRIO, "Josh finished looping through names before cb registration" );
    link_id.link_notifier = (glink_link_state_notif_cb)gpr_ipc_glink_link_state_cb;
    err                   = glink_register_link_state_cb(&link_id, (void *)&gpr_glink_port_pool[dest_domain_id]);
-   AR_MSG(DBG_HIGH_PRIO, "Josh after call back err");
    if (err == GLINK_STATUS_SUCCESS)
    {
       AR_MSG(DBG_ERROR_PRIO, "gpr_glink_init: Successfully register linkstate cb, domain_id: %lu", dest_domain_id);
