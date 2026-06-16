@@ -43,6 +43,10 @@ if(DEFINED GPR_GEN5)
     add_definitions(-DGPR_GEN5)
 endif()
 
+if(DEFINED PLATFORM_LY)
+    add_definitions(-DAR_OSAL_HAS_BOOT_STATE_PROVIDER)
+endif()
+
 add_library(ar-gpr SHARED ${gpr_SOURCE})
 target_link_libraries(ar-gpr PUBLIC ar-osal glink_client)
 

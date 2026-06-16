@@ -9,10 +9,13 @@
 #include "ar_osal_error.h"
 #include "ar_osal_string.h"
 #include "ar_osal_mem_op.h"
+#include "ar_osal_boot.h"
+#include "ar_osal_timer.h"
 #include "gpr_glink.h"
 #include "gpr_glink_i.h"
 #include "gpr_api_inline.h"
 #include "ar_msg.h"
+#include <unistd.h>
 
 #define GPR_GLINK_INTENTS_SUPPORT
 
@@ -44,6 +47,22 @@
 #define GPR_GLINK_NUM_OF_512_BYTES_INTENTS (32)
 #define GPR_GLINK_NUM_OF_1024_BYTES_INTENTS (16)
 #define GPR_GLINK_NUM_OF_4096_BYTES_INTENTS (04)
+
+/* Recovery window used to allow stale GLink channels to be cleaned up. */
+#define GPR_GLINK_RECOVERY_WINDOW_US (5000000ULL)
+
+/* Retry parameters for glink_open when a stale channel from a dead client
+ * blocks the open (GLINK_STATUS_FAILURE/-11).  The GLINK_RM srv_close_handler
+ * cleans up dead-client channels ~1 second after the client dies, so we retry
+ * for up to 2 s (10 x 200 ms) to cover that window. */
+#define GPR_GLINK_OPEN_RETRY_MAX      10
+#define GPR_GLINK_OPEN_RETRY_SLEEP_US 200000
+
+/* Retry parameters for gpr_glink_tx when channel is in CONNECTING state
+ * (covers both the glink_open stale-channel retry window and the post-open
+ * handshake gap).  Ceiling: 110 x 20 ms = 2200 ms > open retry max of 2000 ms. */
+#define GPR_GLINK_TX_WAIT_MAX      110
+#define GPR_GLINK_TX_WAIT_SLEEP_US 20000
 /******************************************************************************
  * Type Definitions                                                           *
  *****************************************************************************/
@@ -63,6 +82,27 @@ static ipc_to_gpr_vtbl_t glink_vtbl = {
 };
 
 static bool_t first_dl_init_done = FALSE;
+static uint64_t gpr_glink_recovery_deadline_us = 0;
+
+static bool_t gpr_glink_recovery_is_active(void)
+{
+   uint64_t time_us;
+
+   if (gpr_glink_recovery_deadline_us == 0)
+   {
+      return FALSE;
+   }
+
+   time_us = ar_timer_get_time_in_us();
+   if (time_us == 0 || time_us >= gpr_glink_recovery_deadline_us)
+   {
+      gpr_glink_recovery_deadline_us = 0;
+      return FALSE;
+   }
+
+   return TRUE;
+}
+
 /******************************************************************************
  * Variables                                                                  *
  *****************************************************************************/
@@ -97,6 +137,22 @@ GPR_INTERNAL uint32_t ipc_dl_glink_init(uint32_t                 src_domain_id,
          gpr_glink_port_pool[index].domain_id = index;
       }
       first_dl_init_done = TRUE;
+
+      if (ar_osal_is_non_cold_boot())
+      {
+         uint64_t time_us = ar_timer_get_time_in_us();
+         if (time_us != 0)
+         {
+            gpr_glink_recovery_deadline_us =
+               time_us + GPR_GLINK_RECOVERY_WINDOW_US;
+         }
+         else
+         {
+            AR_MSG(DBG_ERROR_PRIO,
+                   "ipc_dl_glink_init: ar_timer_get_time_in_us failed, "
+                   "GLink recovery window disabled");
+         }
+      }
    }
 
    get_glink_port_data_info(&port_data_info);
@@ -538,7 +594,33 @@ GPR_INTERNAL uint32_t gpr_glink_open(char_t *port_name, uint32_t port_name_size,
    glink_cfg.priv = port;
    port->state    = GPR_GLINK_CONNECTING;
 
-   if (GLINK_STATUS_SUCCESS != (glink_rc = glink_open(&glink_cfg, &port->glink_handle)))
+   glink_rc = glink_open(&glink_cfg, &port->glink_handle);
+
+   if (gpr_glink_recovery_is_active() &&
+       glink_rc == GLINK_STATUS_FAILURE)
+   {
+      /* GLINK_STATUS_FAILURE (-11) means a same-named channel from a dead
+       * client is still in glink's open_list. GLINK_RM's srv_close_handler
+       * removes it roughly 1 second after the client dies, so retry until
+       * the window closes. Only retry on non-cold boot (SSR restart path). */
+      for (int retry = 0;
+           retry < GPR_GLINK_OPEN_RETRY_MAX &&
+           glink_rc == GLINK_STATUS_FAILURE;
+           retry++)
+      {
+         AR_MSG(DBG_ERROR_PRIO,
+                "gpr_glink_open: stale channel rc=%d, retry %d/%d for domain %lu",
+                glink_rc,
+                retry + 1,
+                GPR_GLINK_OPEN_RETRY_MAX,
+                domain_id);
+
+         usleep(GPR_GLINK_OPEN_RETRY_SLEEP_US);
+         glink_rc = glink_open(&glink_cfg, &port->glink_handle);
+      }
+   }
+
+   if (GLINK_STATUS_SUCCESS != glink_rc)
    {
       AR_MSG(DBG_ERROR_PRIO, "glink_open() failed with rc = %d.", glink_rc);
       port->state = GPR_GLINK_DISCONNECTED;
@@ -575,6 +657,20 @@ GPR_INTERNAL uint32_t gpr_glink_tx(uint32_t domain_id, void *buf, uint32_t size)
 {
    gpr_glink_port_t *port = &gpr_glink_port_pool[domain_id];
    glink_err_type    glink_rc;
+
+   if (GPR_GLINK_CONNECTING == port->state &&
+       gpr_glink_recovery_is_active())
+   {
+      AR_MSG(DBG_HIGH_PRIO, "gpr_glink_tx(): domain %lu still connecting, waiting up to %d ms",
+             domain_id, (GPR_GLINK_TX_WAIT_MAX * GPR_GLINK_TX_WAIT_SLEEP_US) / 1000);
+      for (int retry = 0;
+           retry < GPR_GLINK_TX_WAIT_MAX &&
+           GPR_GLINK_CONNECTING == port->state;
+           retry++)
+      {
+         usleep(GPR_GLINK_TX_WAIT_SLEEP_US);
+      }
+   }
 
    if (GPR_GLINK_CONNECTED != port->state)
    {
