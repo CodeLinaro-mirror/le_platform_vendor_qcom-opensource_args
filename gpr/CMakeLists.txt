@@ -45,4 +45,14 @@ target_link_libraries(ar-gpr PUBLIC ar-osal glink_client)
 install(TARGETS ar-gpr LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(DIRECTORY ${gpr_includes} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
+# Define installation paths and generate .pc file from template
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix ${prefix})
+set(includedir ${prefix}/include)
+set(libdir ${exec_prefix}/lib)
+set(LT_VERSION "1.0.0")
+set(pkgconfigdir ${libdir}/pkgconfig)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gpr.pc.in ${CMAKE_CURRENT_BINARY_DIR}/gpr.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gpr.pc DESTINATION ${pkgconfigdir})
 
