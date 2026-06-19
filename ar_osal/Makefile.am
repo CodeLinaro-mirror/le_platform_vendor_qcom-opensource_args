@@ -55,7 +55,6 @@ endif
 
 if USE_DUMMY_DIAG
 osal_c_sources += ./src/linux/ar_osal_stub_log_pkt_op.c
-AM_CFLAGS += -DAR_OSAL_USES_DUMMY_DIAG
 else
 osal_c_sources += ./src/linux/qcom/ar_osal_log_pkt_op.c
 endif
@@ -83,10 +82,6 @@ endif
 if USE_GLIB
 libar_osal_la_LIBADD += -lglib-2.0
 AM_CFLAGS += $(GLIB_CFLAGS) -D_GNU_SOURCE -include glib.h
-endif
-
-if !USE_DUMMY_DIAG
-libar_osal_la_LIBADD += -llog -ldiag
 endif
 
 if USE_G_STR_FUNC
