@@ -675,7 +675,7 @@ int32_t gsl_hpcm_data_buf_cfg(struct gsl_data_path_info *dp_info,
 	apm_hdr = (struct apm_cmd_header_t *)spf_cmd;
 	param_hdr = (struct apm_module_param_data_t *)
 		(spf_cmd + sizeof(*apm_hdr));
-	buf_cfg_cmd = (struct sh_mem_pull_push_mode_cfg_t *)(spf_cmd +
+	buf_cfg_cmd = (struct param_id_hpcm_data_buf_cfg_t *)(spf_cmd +
 		sizeof(*apm_hdr) + sizeof(*param_hdr));
 
 	apm_hdr->payload_size = spf_cmd_sz - sizeof(*apm_hdr);

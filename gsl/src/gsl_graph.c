@@ -763,7 +763,7 @@ static void gsl_graph_ckv_list_print(AcdbKeyVectorList *rsp)
 	}
 }
 
-static void gsl_graph_check_ckvs(struct gsl_key_vector *gkv, struct gsl_key_vector *ckv)
+static void gsl_graph_check_ckvs(const struct gsl_key_vector *gkv, const struct gsl_key_vector *ckv)
 {
 	AcdbKeyVectorList rsp;
 	AcdbKeyVector *kvs = NULL;

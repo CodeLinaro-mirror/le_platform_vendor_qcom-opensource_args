@@ -12,10 +12,8 @@
 #include "ar_osal_error.h"
 #include "ar_osal_log.h"
 #include "comdef.h"
-#include "log.h"
-#ifdef AR_OSAL_USES_DUMMY_DIAG
 #include "diag_lsm.h"
-#endif
+#include "log.h"
 
 /**<
 Length of the DIAG log packet header in bytes. The QXDM Pro log

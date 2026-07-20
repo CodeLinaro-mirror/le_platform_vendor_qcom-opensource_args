@@ -683,7 +683,7 @@ ar_osal_servreg_t ar_osal_servreg_register(_In_ ar_osal_client_type  client_type
 end:
     return (ar_osal_servreg_t)srv_reg_handle;
 #else
-    return 1;
+    return (ar_osal_servreg_t)NULL;
 #endif
 }
 
@@ -761,6 +761,7 @@ int32_t ar_osal_servreg_set_state(_In_ ar_osal_servreg_t servreg_handle __unused
 }
 #endif /* __cplusplus */
 
+#ifdef AR_OSAL_USE_PD_NOTIFIER
 _IRQL_requires_max_(PASSIVE_LEVEL)
 static int32_t ar_osal_servreg_ssr() {
 #ifdef PROPERTY_TRIGGER
@@ -788,6 +789,7 @@ static int32_t ar_osal_servreg_ssr() {
     return rc;
 #endif
 }
+#endif /* AR_OSAL_USE_PD_NOTIFIER */
 
 /**
 * \brief induce panic to crash the system

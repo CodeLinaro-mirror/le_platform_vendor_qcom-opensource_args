@@ -317,7 +317,7 @@ int32_t gsl_mdf_utils_get_supported_ss_info_from_acdb(void)
 					p->num_satellite_procs * sizeof(uint32_t));
 			}
 			acdb_rsp.buf_size -= ((void *)p - (void *)tmp_pos);
-			tmp_p = p;
+			tmp_p = (uint32_t *)p;
 		} else if (*tmp_p == PARAM_ID_PROC_DOMAIN_INFO) {
 			tmp_pos = tmp_p;
 			++tmp_p; /* Skip Param ID */
@@ -338,7 +338,7 @@ int32_t gsl_mdf_utils_get_supported_ss_info_from_acdb(void)
 				++pt;
 			}
 			acdb_rsp.buf_size -= ((void *)pt - (void *)tmp_pos);
-			tmp_p = pt;
+			tmp_p = (uint32_t *)pt;
 		} else {
 			GSL_ERR("got incorrect PID from ACDB %d",
 					*((uint32_t *)acdb_rsp.buf));
@@ -612,7 +612,6 @@ int32_t gsl_mdf_utils_deregister_dynamic_pd(uint32_t ss_mask,
 {
 	int32_t rc = AR_EOK;
 	uint32_t sys_id = AR_SUB_SYS_ID_FIRST, tmp_ss_mask = 0, sm = 0;
-	uint32_t tmp_pd_list[AR_SUB_SYS_ID_LAST] = {0}, pd_cnt = 0;
 
 	tmp_ss_mask = ss_mask;
 	while (tmp_ss_mask) {

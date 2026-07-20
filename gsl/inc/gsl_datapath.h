@@ -358,6 +358,13 @@ int32_t gsl_wait_for_all_buffs_to_be_avail(struct gsl_data_path_info *dp_info);
 
 int32_t gsl_dp_queue_read_buffers_to_spf(struct gsl_data_path_info *dp_info);
 
+/**
+ * \brief handle HPCM host buffer done event from SPF
+ */
+struct gsl_graph;
+void gsl_handle_hpcm_buff_done(struct gsl_graph *graph, gpr_packet_t *packet,
+	void *payload);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
