@@ -32,6 +32,10 @@ set(ar_gsl_SOURCE
 add_definitions(-DGSL_DEBUG_ENABLE)
 add_definitions(-DGSL_EXT_MEM_CACHE_DISABLE)
 
+if(DEFINED PLATFORM_LY)
+    add_definitions(-DAR_OSAL_HAS_BOOT_STATE_PROVIDER)
+endif()
+
 add_library(ar-gsl SHARED ${ar_gsl_SOURCE})
 target_link_libraries(ar-gsl PUBLIC acdb ar-osal ar-util ar-gpr)
 
