@@ -1528,6 +1528,47 @@ exit:
 	return rc;
 }
 
+int32_t gsl_set_tagged_custom_config_v2(gsl_handle_t graph_handle, uint32_t tag,
+	uint32_t spf_mmap_handle, uint64_t spf_addr, void *v_addr,
+	const size_t payload_size)
+{
+	struct gsl_graph *graph;
+	int32_t rc = AR_EOK;
+
+	if (!gsl_main_start_client_op(&gsl_ctxt))
+		return rc;
+
+	graph = to_gsl_graph(graph_handle);
+	if (!graph) {
+		rc = AR_EBADPARAM;
+		goto exit;
+	}
+
+	if (gsl_graph_get_state(graph) == GRAPH_ERROR ||
+		gsl_graph_get_state(graph) == GRAPH_ERROR_ALLOW_CLEANUP) {
+		rc = AR_ESUBSYSRESET;
+		goto exit;
+	}
+
+	if (!v_addr || !spf_mmap_handle ||
+		payload_size < sizeof(uint32_t) ||
+		payload_size > UINT32_MAX || (tag == 0)) {
+		GSL_ERR("v_addr is null, mem handle is zero, size is invalid, or tag is zero");
+		rc = AR_EBADPARAM;
+		goto exit;
+	}
+
+	rc = gsl_graph_set_tagged_custom_config_v2(graph, tag, spf_mmap_handle,
+		spf_addr, v_addr, payload_size, NULL);
+	if (rc)
+		GSL_ERR("graph set tagged custom config v2 failed: %d", rc);
+
+exit:
+	gsl_main_end_client_op(&gsl_ctxt);
+
+	return rc;
+}
+
 int32_t gsl_set_tagged_custom_config(gsl_handle_t graph_handle, uint32_t tag,
 	const uint8_t *payload, const size_t payload_size)
 {

@@ -343,6 +343,10 @@ int32_t gsl_graph_set_custom_config(struct gsl_graph *graph,
 	const uint8_t *payload,	const uint32_t payload_size,
 	ar_osal_mutex_t lock);
 
+int32_t gsl_graph_set_tagged_custom_config_v2(struct gsl_graph *graph,
+	uint32_t tag, uint32_t spf_mmap_handle, uint64_t spf_addr, void *v_addr,
+	const size_t payload_size, ar_osal_mutex_t lock);
+
 /**
  * \brief Get custom graph configuration from SPF.
  *
@@ -720,4 +724,3 @@ void gsl_graph_set_rtgm_state(struct gsl_graph *graph, bool_t rtgm_in_prog);
 #endif
 
 #endif /* GSL_GRAPH_H */
-
