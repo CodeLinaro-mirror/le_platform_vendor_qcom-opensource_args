@@ -23,6 +23,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <ctype.h>
 #ifdef AR_OSAL_USE_CUTILS
 #include <cutils/properties.h>
 #endif
