@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.5)
 
 project(ar-osal)
 
+option(AR_OSAL_AUDIO_LOG_UTIL_BRIDGE
+    "Route ARGS logs through audio-log-util" OFF)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/${CMAKE_INSTALL_INCLUDEDIR}/diag_lsm/include")
 
 set(ar_osal_includes
@@ -43,6 +46,10 @@ endif()
 
 add_library(ar-osal SHARED ${ar_osal_SOURCE})
 target_link_libraries(ar-osal PUBLIC audio_utils pthread glib-2.0 cutils kiumd diag-lsm ssr-client)
+if(AR_OSAL_AUDIO_LOG_UTIL_BRIDGE)
+    target_compile_definitions(ar-osal PRIVATE AR_OSAL_AUDIO_LOG_UTIL_BRIDGE)
+    target_link_libraries(ar-osal PUBLIC audio_log_util)
+endif()
 
 install(TARGETS ar-osal LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(DIRECTORY ${ar_osal_includes} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
