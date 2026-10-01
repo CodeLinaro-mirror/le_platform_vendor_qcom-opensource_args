@@ -30,7 +30,8 @@ set(ar_osal_SOURCE
 if(DEFINED PLATFORM_LY)
     list(APPEND ar_osal_SOURCE
         ./platform/ly/src/ar_osal_shmem.c
-        ./platform/ly/src/ar_osal_servreg.c)
+        ./platform/ly/src/ar_osal_servreg.c
+        ./platform/ly/src/ar_osal_boot.c)
 endif()
 
 add_definitions(-DLINUX_ENABLED)
@@ -42,6 +43,7 @@ add_definitions(-DAR_OSAL_USE_SYSLOG)
 
 if(DEFINED PLATFORM_LY)
     add_definitions(-DPLATFORM_LY)
+    add_definitions(-DAR_OSAL_HAS_BOOT_STATE_PROVIDER)
 endif()
 
 add_library(ar-osal SHARED ${ar_osal_SOURCE})
