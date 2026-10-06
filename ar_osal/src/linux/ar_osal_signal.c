@@ -24,6 +24,7 @@ typedef struct osal_int_signal {
 	pthread_mutex_t osal_mutex;
 	pthread_cond_t osal_cond;
 	bool signalled;
+	bool cond_destroyed; /* Tracks completed condition teardown for repeat destroy. */
 } osal_int_signal_t;
 
 _IRQL_requires_max_(DISPATCH_LEVEL)
@@ -69,17 +70,37 @@ int32_t ar_osal_signal_create(_Inout_ ar_osal_signal_t *ret_signal)
         rc = AR_EFAILED;
         goto err_mutex;
     }
-    pthread_condattr_init(&attr);
-    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    rc = pthread_condattr_init(&attr);
+    if (rc) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to init cond attr, rc = %d\n", __func__, rc);
+        rc = AR_EFAILED;
+        goto err_cond;
+    }
+    rc = pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    if (rc) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to set cond attr clock, rc = %d\n", __func__, rc);
+        rc = AR_EFAILED;
+        goto err_attr;
+    }
     rc = pthread_cond_init(&the_signal->osal_cond, &attr);
+    /* Attribute is no longer needed after pthread_cond_init(), regardless
+     * of its return value. */
+    if (pthread_condattr_destroy(&attr)) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to destroy cond attr\n", __func__);
+    }
     if (rc) {
         AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to init cond, rc = %d\n", __func__, rc);
         rc = AR_EFAILED;
         goto err_cond;
     }
     the_signal->signalled = false;
+    the_signal->cond_destroyed = false;
     *ret_signal = the_signal;
     goto done;
+err_attr:
+    if (pthread_condattr_destroy(&attr)) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to destroy cond attr\n", __func__);
+    }
 err_cond:
     pthread_mutex_destroy(&the_signal->osal_mutex);
 err_mutex:
@@ -108,29 +129,21 @@ int32_t ar_osal_signal_wait(_In_ ar_osal_signal_t signal)
     }
     if (true == the_signal->signalled)
     {
-        rc = pthread_mutex_unlock(&the_signal->osal_mutex);
-        if (rc) {
-            AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock, rc = %d\n", __func__, rc);
-            rc = AR_EFAILED;
-        }
-        goto done;
+        goto unlock;
     }
 
     rc = pthread_cond_wait(&the_signal->osal_cond, &the_signal->osal_mutex);
     if (rc) {
         AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to wait on signal, rc = %d\n", __func__, rc);
         rc = AR_EFAILED;
-        goto err_cond;
     }
 
-    rc = pthread_mutex_unlock(&the_signal->osal_mutex);
-    if (rc) {
-        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock, rc = %d\n", __func__, rc);
-        rc = AR_EFAILED;
-        goto done;
+unlock:
+    if (pthread_mutex_unlock(&the_signal->osal_mutex)) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock\n", __func__);
+        if (rc == AR_EOK)
+            rc = AR_EFAILED;
     }
-err_cond:
-    pthread_mutex_unlock(&the_signal->osal_mutex);
 done:
     return rc;
 }
@@ -166,29 +179,25 @@ int32_t ar_osal_signal_timedwait(_In_ ar_osal_signal_t signal, _In_ int64_t time
     }
 
     if (true == the_signal->signalled) {
-        rc = pthread_mutex_unlock(&the_signal->osal_mutex);
-        if (rc) {
-            AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock, rc = %d\n", __func__, rc);
-            rc = AR_EFAILED;
-        }
-        goto done;
+        goto unlock;
     }
 
     rc = pthread_cond_timedwait(&the_signal->osal_cond, &the_signal->osal_mutex, &osal_ts);
     if (rc) {
-
-        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to wait on signal, rc = %d\n", __func__, rc);
-        rc = AR_EFAILED;
-        goto err_cond;
+        if (rc == ETIMEDOUT) {
+            rc = AR_ETIMEOUT;
+        } else {
+            AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to wait on signal, rc = %d\n", __func__, rc);
+            rc = AR_EFAILED;
+        }
     }
 
-    rc = pthread_mutex_unlock(&the_signal->osal_mutex);
-    if (rc) {
-        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock, rc = %d\n", __func__, rc);
-        rc = AR_EFAILED;
+unlock:
+    if (pthread_mutex_unlock(&the_signal->osal_mutex)) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock\n", __func__);
+        if (rc == AR_EOK)
+            rc = AR_EFAILED;
     }
-err_cond:
-    pthread_mutex_unlock(&the_signal->osal_mutex);
 done:
     return rc;
 }
@@ -218,16 +227,13 @@ int32_t ar_osal_signal_set(_In_ ar_osal_signal_t signal)
     if (rc) {
         AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to signal on signal, rc = %d\n", __func__, rc);
         rc = AR_EFAILED;
-		goto err_cond;
     }
 
-    rc = pthread_mutex_unlock(&the_signal->osal_mutex);
-    if (rc) {
-        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock, rc = %d\n", __func__, rc);
-        rc = AR_EFAILED;
+    if (pthread_mutex_unlock(&the_signal->osal_mutex)) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock\n", __func__);
+        if (rc == AR_EOK)
+            rc = AR_EFAILED;
     }
-err_cond:
-    pthread_mutex_unlock(&the_signal->osal_mutex);
 done:
     return rc;
 }
@@ -245,8 +251,6 @@ int32_t ar_osal_signal_destroy(_In_ ar_osal_signal_t signal)
     }
 
     the_signal = (osal_int_signal_t *)signal;
-
-    the_signal-> signalled = false;
     rc = pthread_mutex_lock(&the_signal->osal_mutex);
 
     if (rc) {
@@ -254,32 +258,42 @@ int32_t ar_osal_signal_destroy(_In_ ar_osal_signal_t signal)
         rc = AR_EFAILED;
         return rc;
     }
-    rc = pthread_cond_destroy(&the_signal->osal_cond);
+    the_signal->signalled = false;
 
-    if (rc) {
-        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to destroy signal, rc = %d\n", __func__, rc);
-        rc = AR_EFAILED;
-        goto err_cond;
+    /*
+     * If mutex cleanup fails after condition destruction succeeds, a later
+     * destroy call must not destroy the condition variable a second time.
+     */
+    if (!the_signal->cond_destroyed) {
+        rc = pthread_cond_destroy(&the_signal->osal_cond);
+        if (rc) {
+            AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to destroy signal, rc = %d\n", __func__, rc);
+            rc = AR_EFAILED;
+        } else {
+            the_signal->cond_destroyed = true;
+        }
     }
-    rc = pthread_mutex_unlock(&the_signal->osal_mutex);
-    if (rc) {
-        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock, rc = %d\n", __func__, rc);
-        rc = AR_EFAILED;
-        goto err_destroy;
+    if (pthread_mutex_unlock(&the_signal->osal_mutex)) {
+        AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to unlock\n", __func__);
+        if (rc == AR_EOK)
+            rc = AR_EFAILED;
     }
+    /*
+     * A failed condition destroy may mean waiters still reference the signal.
+     * A failed unlock leaves mutex ownership uncertain. Retain the signal on
+     * either failure so a later destroy call can finish cleanup safely.
+     */
+    if (rc)
+        goto done;
+    /* Free only after all synchronization objects are destroyed successfully. */
     rc = pthread_mutex_destroy(&the_signal->osal_mutex);
     if (rc) {
         AR_LOG_ERR(AR_OSAL_SIGNAL_LOG_TAG,"%s: Failed to destroy mutex, rc = %d\n", __func__, rc);
         rc = AR_EFAILED;
+        goto done;
     }
-    goto done;
-
-err_cond:
-    pthread_mutex_unlock(&the_signal->osal_mutex);
-err_destroy:
-    pthread_mutex_destroy(&the_signal->osal_mutex);
-done:
     free(signal);
+done:
     return rc;
 }
 
