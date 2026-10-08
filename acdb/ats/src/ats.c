@@ -8,8 +8,8 @@
 *     Tuning Service to handle request buffer and operate ACDB
 *
 * \copyright
-*  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*  SPDX-License-Identifier: BSD-3-Clause-Clear
+*  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+*  SPDX-License-Identifier: BSD-3-Clause
 *
 *==============================================================================
 */
@@ -203,7 +203,7 @@ int32_t ats_init(void)
 	}
 
 	service_status = ats_dls_init(ats_transport_dls_send_callback);
-	if (AR_FAILED(service_status))
+	if (AR_FAILED(service_status) && (AR_EUNSUPPORTED != service_status))
 	{
 		ATS_ERR("Error[%d]: Failed to initialize "
 			"Data Logging Service", service_status);
@@ -211,7 +211,7 @@ int32_t ats_init(void)
 	}
 
 	service_status = ats_mcs_init();
-	if (AR_FAILED(service_status))
+	if (AR_FAILED(service_status) && (AR_EUNSUPPORTED != service_status))
 	{
 		ATS_ERR("Error[%d]: Failed to initialize "
 			"Media Control service", service_status);
@@ -219,7 +219,7 @@ int32_t ats_init(void)
 	}
 
 	service_status = ats_adie_rtc_init();
-	if (AR_FAILED(service_status))
+	if (AR_FAILED(service_status) && (AR_EUNSUPPORTED != service_status))
 	{
 		ATS_ERR("Error[%d]: Failed to initialize "
 			"Codec Realtime Calibration service", service_status);
@@ -254,7 +254,7 @@ end:
 	}
 	else
 	{
-		ATS_ERR("Error[%d]: Successfully initialized ATS", status);
+		ATS_INFO("Status[%d]: Successfully initialized ATS", status);
 	}
 
 	return status;
@@ -309,6 +309,7 @@ int32_t ats_deinit(void)
     (void)ats_fts_deinit();
     (void)ats_mcs_deinit();
     (void)ats_adie_rtc_deinit();
+    (void)ats_dls_deinit();
 
 	// Deinitializes transport(s)
 	(void)ats_transport_deinit();
@@ -1014,4 +1015,3 @@ void ats_register_simulation(ATS_SIM_CALLBACK sim_callback)
     ats_simulation_callback = sim_callback;
 #endif
 }
-

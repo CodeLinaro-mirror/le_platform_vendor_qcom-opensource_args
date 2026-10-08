@@ -35,9 +35,11 @@ set(ats_SOURCE
     dls/common/src/ats_dls.c)
 
 if(DEFINED PLATFORM_LY)
+    list(REMOVE_ITEM ats_SOURCE dls/common/src/ats_dls.c)
     list(APPEND ats_SOURCE
-            mcs/ly/ats_mcs.c
-            adie/ly/ats_adie_rtc.c
+            mcs/ly/ats_mcs_stub.c
+            adie/ly/ats_adie_rtc_stub.c
+            dls/ly/ats_dls_stub.c
         )
     add_definitions(-DPLATFORM_LY)
 endif()
