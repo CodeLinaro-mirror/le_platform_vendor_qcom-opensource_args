@@ -83,9 +83,15 @@ static uint32_t global_region_counter = 0;
 /** Generates a 24-bit unique shared memory ID with 5-bit client ID
   * and 19-bit region ID.
   */
+static ar_osal_mutex_t shm_map_table_lock;
+
 static inline uint32_t generate_unique_shm_id(void)
 {
-	uint32_t region_id = global_region_counter++ & REGION_ID_MASK;
+	uint32_t region_id;
+
+	GSL_MUTEX_LOCK(shm_map_table_lock);
+	region_id = global_region_counter++ & REGION_ID_MASK;
+	GSL_MUTEX_UNLOCK(shm_map_table_lock);
 	return (CLIENT_ID << CLIENT_ID_SHIFT) | region_id;
 }
 
@@ -101,8 +107,9 @@ typedef struct {
 } shm_region_v2_entry_t;
 
 
-static shm_region_v2_entry_t shm_map_table[MAX_MAPPED_REGIONS];
+static shm_region_v2_entry_t *shm_map_table;
 static uint32_t shm_map_count = 0;
+static uint32_t shm_map_capacity = 0;
 
 /**
  * \brief Records a mapping entry for later unmap.
@@ -115,16 +122,36 @@ static uint32_t shm_map_count = 0;
  *
  * \return GSL_EOK on success, error code otherwise
  */
-static inline void record_shm_mapping(uint32_t unique_shm_id, uint32_t dsp_id, uint64_t phy_addr, uint32_t size)
+static inline int record_shm_mapping(uint32_t unique_shm_id, uint32_t dsp_id, uint64_t phy_addr, uint32_t size)
 {
-	if (shm_map_count < MAX_MAPPED_REGIONS) {
-		shm_map_table[shm_map_count++] = (shm_region_v2_entry_t){
-		.unique_shm_id = unique_shm_id,
-		.dsp_id = dsp_id,
-		.phy_addr = phy_addr,
-		.size = size
-		};
+	int32_t rc = AR_EOK;
+
+	GSL_MUTEX_LOCK(shm_map_table_lock);
+	if (shm_map_count == shm_map_capacity) {
+		uint32_t new_capacity = shm_map_capacity ?
+			shm_map_capacity * 2 : MAX_MAPPED_REGIONS;
+		shm_region_v2_entry_t *new_table = shm_map_table ?
+			gsl_mem_realloc(shm_map_table,
+				shm_map_capacity * sizeof(*shm_map_table),
+				new_capacity * sizeof(*shm_map_table)) :
+			gsl_mem_zalloc(new_capacity * sizeof(*shm_map_table));
+
+		if (!new_table) {
+			rc = AR_ENOMEMORY;
+			goto unlock;
+		}
+		shm_map_table = new_table;
+		shm_map_capacity = new_capacity;
 	}
+	shm_map_table[shm_map_count++] = (shm_region_v2_entry_t){
+	.unique_shm_id = unique_shm_id,
+	.dsp_id = dsp_id,
+	.phy_addr = phy_addr,
+	.size = size
+	};
+unlock:
+	GSL_MUTEX_UNLOCK(shm_map_table_lock);
+	return rc;
 }
 
 /**
@@ -139,13 +166,18 @@ static inline void record_shm_mapping(uint32_t unique_shm_id, uint32_t dsp_id, u
  */
 static inline int find_unique_shm_id_for_unmap(uint32_t dsp_id, uint64_t phy_addr, uint32_t *out_shm_id)
 {
+	int32_t rc = AR_EFAILED;
+
+	GSL_MUTEX_LOCK(shm_map_table_lock);
 	for (uint32_t i = 0; i < shm_map_count; ++i) {
 		if (shm_map_table[i].dsp_id == dsp_id && shm_map_table[i].phy_addr == phy_addr) {
 			*out_shm_id = shm_map_table[i].unique_shm_id;
-			return AR_EOK;
+			rc = AR_EOK;
+			break;
 		}
 	}
-	return AR_EFAILED;
+	GSL_MUTEX_UNLOCK(shm_map_table_lock);
+	return rc;
 }
 /**
  * \brief Removes a mapping entry from the tracking table based on unique_shm_id and dsp_id
@@ -156,13 +188,15 @@ static inline int find_unique_shm_id_for_unmap(uint32_t dsp_id, uint64_t phy_add
  */
 static inline void remove_shm_mapping(uint32_t unique_shm_id, uint32_t dsp_id)
 {
-    for (uint32_t i = 0; i < shm_map_count; ++i) {
-        if (shm_map_table[i].unique_shm_id == unique_shm_id && shm_map_table[i].dsp_id == dsp_id) {
-            shm_map_table[i] = shm_map_table[shm_map_count - 1];
-            --shm_map_count;
-            return;
-        }
-    }
+	GSL_MUTEX_LOCK(shm_map_table_lock);
+	for (uint32_t i = 0; i < shm_map_count; ++i) {
+		if (shm_map_table[i].unique_shm_id == unique_shm_id && shm_map_table[i].dsp_id == dsp_id) {
+			shm_map_table[i] = shm_map_table[shm_map_count - 1];
+			--shm_map_count;
+			break;
+		}
+	}
+	GSL_MUTEX_UNLOCK(shm_map_table_lock);
 }
 
 struct gsl_apm_mem_map {
@@ -653,8 +687,15 @@ static int32_t gsl_shmem_map_region_v2(struct gsl_shmem_page *page,
 	tmp_spf_ss_mask = spf_ss_map_mask;
 	spf_ss_mask_sans_adsp = spf_ss_map_mask;
 	total_size  = page->size_bytes;
+	if (num_dsp == 0) {
+		GSL_ERR("no DSP in map mask 0x%x", spf_ss_map_mask);
+		return AR_EBADPARAM;
+	}
 	region_size = ALIGN_DOWN_4K(total_size / num_dsp);
-	uint64_t phy_addr = ((uint64_t)page->shmem_info.ipa_msw << 32) | (page->shmem_info.ipa_lsw + (region_index * region_size) );
+	if (region_size == 0) {
+		GSL_ERR("page size %u too small for %u DSPs", total_size, num_dsp);
+		return AR_EBADPARAM;
+	}
 
 	while (tmp_spf_ss_mask) {
 		if (GSL_TEST_SPF_SS_BIT(spf_ss_mask_sans_adsp, sys_id)) {
@@ -704,12 +745,32 @@ static int32_t gsl_shmem_map_region_v2(struct gsl_shmem_page *page,
 						mmap_v2->mmap_header.property_flag);
 				}
 
-				mmap_v2->mmap_payload.shm_addr_lsw = page->shmem_info.ipa_lsw + (region_index * region_size);
-				mmap_v2->mmap_payload.shm_addr_msw = page->shmem_info.ipa_msw;
+				/*
+				 * Region address = page address + offset.
+				 * The page address is split into ipa_msw
+				 * (high 32 bits) and ipa_lsw (low 32 bits).
+				 * Adding the offset to ipa_lsw alone drops
+				 * the carry when the region crosses a 4 GiB
+				 * boundary: page 0x1_FFFFF000 + 0x2000 gives
+				 * 0x1_00001000, not 0x2_00001000. Add in
+				 * 64 bits, then split. Unmap computes the
+				 * same value to find this entry.
+				 */
+				uint64_t phy_addr = (((uint64_t)page->shmem_info.ipa_msw << 32) |
+					page->shmem_info.ipa_lsw) +
+					((uint64_t)region_index * region_size);
+				mmap_v2->mmap_payload.shm_addr_lsw = (uint32_t)phy_addr;
+				mmap_v2->mmap_payload.shm_addr_msw = (uint32_t)(phy_addr >> 32);
 				mmap_v2->mmap_payload.mem_size_bytes = region_size;
 
-			    phy_addr = ((uint64_t)mmap_v2->mmap_payload.shm_addr_msw << 32) | (mmap_v2->mmap_payload.shm_addr_lsw );
-				record_shm_mapping(mmap_v2->mmap_header.unique_shm_id, current_dsp, phy_addr, region_size);
+				uint32_t map_shm_id = mmap_v2->mmap_header.unique_shm_id;
+				rc = record_shm_mapping(map_shm_id, current_dsp, phy_addr, region_size);
+				if (rc) {
+					GSL_ERR("shm map table alloc failed %d", rc);
+					__gpr_cmd_free(send_pkt);
+					send_pkt = NULL;
+					goto exit;
+				}
 
 				send_pkt->client_data |= cma_client_data;
 				GSL_LOG_PKT("send_pkt", GSL_SHMEM_SRC_PORT, send_pkt,
@@ -717,48 +778,48 @@ static int32_t gsl_shmem_map_region_v2(struct gsl_shmem_page *page,
 
 				if (!ctxt[current_dsp]) {
 					GSL_ERR("ctxt[%d] is NULL — aborting memmap", current_dsp);
+					remove_shm_mapping(mmap_v2->mmap_header.unique_shm_id, current_dsp);
+					__gpr_cmd_free(send_pkt);
+					send_pkt = NULL;
+					rc = AR_EUNEXPECTED;
 					goto exit;
 				}else{
 					ctxt[current_dsp]->page_being_mapped = page;
 					ctxt[current_dsp]->memmap_count++;
 				}
 
-				ctxt[current_dsp]->page_being_mapped = page;
-				ctxt[current_dsp]->memmap_count++;
-
 				rc = gsl_send_spf_cmd(&send_pkt, &ctxt[current_dsp]->sig,
 						&rsp_pkt);
 				if (rc) {
 					GSL_ERR("Mem map satellite failed:%d", rc);
-					if (rsp_pkt)
+					if (rsp_pkt) {
+						/* error rsp: no handler call */
 						__gpr_cmd_free(rsp_pkt);
+						goto undo_map;
+					}
+					/* send fail, SSR, close: no rsp will come */
+					if (rc != AR_ETIMEOUT)
+						goto undo_map;
+					/* Keep the mapping-table entry and memmap count for deferred cleanup. */
 					goto exit;
 				}
 				if (!rsp_pkt) {
 					GSL_ERR("Received null response packet");
 					rc = AR_EUNEXPECTED;
-					goto exit;
+					goto undo_map;
 				}
+				/* handler frees rsp_pkt on every path */
 				rc = gsl_shmem_handle_rsp(rsp_pkt, current_dsp,
 					GPR_IBASIC_RSP_RESULT);
 				if (rc) {
 					GSL_ERR("Mem map satellite failed:%d", rc);
-					if (rsp_pkt)
-						__gpr_cmd_free(rsp_pkt);
-					goto exit;
+					goto undo_map;
 				}
-				if (!rsp_pkt) {
-					GSL_ERR("Received null response packet");
-					rc = AR_EUNEXPECTED;
-					goto exit;
-				}
-				rc = gsl_shmem_handle_rsp(rsp_pkt, current_dsp,
-					GPR_IBASIC_RSP_RESULT);
-				if (rc) {
-					GSL_ERR("handle shmem response failed %d", rc);
-					goto exit;
-				}
-
+				continue;
+undo_map:
+				ctxt[current_dsp]->memmap_count--;
+				remove_shm_mapping(map_shm_id, current_dsp);
+				goto exit;
 			}
 			if (send_access_info_cmd) {
 			/* Populate peer_proc_domain_list[] with all DSPs except the owner (sys_id) */
@@ -981,7 +1042,6 @@ static int32_t gsl_shmem_unmap_region_v2(struct gsl_shmem_page *page,
 	uint32_t spf_ss_unmap_mask, uint32_t master_proc_id, uint8_t cma_client_data)
 {
     int32_t rc = AR_EOK;
-	struct apm_cmd_shared_satellite_mem_unmap_regions_t *payload_sat;
 	uint32_t tmp_spf_ss_mask, spf_ss_mask_sans_adsp;
 	uint32_t sys_id = AR_MODEM_DSP;
 	gpr_packet_t *send_pkt = NULL, *rsp_pkt = NULL;
@@ -1018,12 +1078,22 @@ static int32_t gsl_shmem_unmap_region_v2(struct gsl_shmem_page *page,
 	tmp_spf_ss_mask = spf_ss_unmap_mask;
 	spf_ss_mask_sans_adsp = spf_ss_unmap_mask;
 	total_size  = page->size_bytes;
+	if (num_dsp == 0) {
+		GSL_ERR("no DSP in unmap mask 0x%x", spf_ss_unmap_mask);
+		return AR_EBADPARAM;
+	}
 	region_size = ALIGN_DOWN_4K(total_size / num_dsp);
 	while (tmp_spf_ss_mask) {
 		if (GSL_TEST_SPF_SS_BIT(spf_ss_mask_sans_adsp, sys_id)) {
 			for (uint32_t i = 0; i < num_dsp; ++i) {
 				uint32_t current_dsp = dsp_list[i];
-				uint64_t phy_addr = ((uint64_t)page->shmem_info.ipa_msw  << 32) | (page->shmem_info.ipa_lsw + (region_index * region_size)); // check
+				/*
+				 * Same 64-bit math as map V2, so the lookup key
+				 * matches the phy_addr recorded there.
+				 */
+				uint64_t phy_addr = (((uint64_t)page->shmem_info.ipa_msw << 32) |
+					page->shmem_info.ipa_lsw) +
+					((uint64_t)region_index * region_size);
 				rc = find_unique_shm_id_for_unmap(current_dsp, phy_addr, &shm_id);
 				if(rc){
 					GSL_ERR("Failed to find unique shm id %d", rc);
@@ -1032,8 +1102,7 @@ static int32_t gsl_shmem_unmap_region_v2(struct gsl_shmem_page *page,
 				remove_shm_mapping(shm_id, current_dsp);
 				rc = gsl_allocate_gpr_packet(
 				APM_CMD_SHARED_MEM_UNMAP_REGIONS_V2, GSL_SHMEM_SRC_PORT,
-				APM_MODULE_INSTANCE_ID, sizeof(*payload_sat), 0, current_dsp,
-				&send_pkt);
+				APM_MODULE_INSTANCE_ID, sizeof(*payload_v2), 0, current_dsp, &send_pkt);
 				if (rc) {
 					GSL_ERR("Failed to allocate GPR packet %d", rc);
 				goto exit;
@@ -1047,21 +1116,25 @@ static int32_t gsl_shmem_unmap_region_v2(struct gsl_shmem_page *page,
 				send_pkt->client_data |= cma_client_data;
 
 				GSL_LOG_PKT("send_pkt", GSL_SHMEM_SRC_PORT, send_pkt,
-				sizeof(*send_pkt) + sizeof(*payload_sat), NULL, 0);
+				sizeof(*send_pkt) + sizeof(*payload_v2), NULL, 0);
 
 				if (!ctxt[current_dsp]) {
 					GSL_ERR("ctxt[%d] is NULL — aborting unmemmap", current_dsp);
+					__gpr_cmd_free(send_pkt);
+					send_pkt = NULL;
+					rc = AR_EUNEXPECTED;
 					goto exit;
 				}else{
 					ctxt[current_dsp]->page_being_mapped = page;
-					ctxt[current_dsp]->memmap_count++;
+					ctxt[current_dsp]->memmap_count--;
 				}
 				rc = gsl_send_spf_cmd(&send_pkt, &ctxt[current_dsp]->sig,
 					      &rsp_pkt);
 				if (rc || !rsp_pkt) {
-					if (rsp_pkt)
-						GSL_ERR("check unmap fail rc: %d rsp_pkt:%d", rc,rsp_pkt);
+					if (rsp_pkt) {
+						GSL_ERR("check unmap fail rc: %d rsp_pkt: %p", rc, rsp_pkt);
 						__gpr_cmd_free(rsp_pkt);
+					}
 					goto exit;
 				}
 				rc = gsl_shmem_handle_rsp(rsp_pkt, current_dsp,
@@ -1289,7 +1362,7 @@ static int32_t free_page(int32_t bin_idx,
 {
 	int32_t rc = AR_EOK, rc1 = AR_EOK;
 	uint32_t master_proc_id = page->master_proc;
-	uint32_t sys_id = AR_SUB_SYS_ID_FIRST;
+	uint32_t sys_id = 0;
 	struct gsl_shmem_bin *bin = &ctxt[master_proc_id]->bins[bin_idx];
 
 	rc = gsl_shmem_unmap_page_from_spf(page, page->spf_ss_mask);
@@ -1304,13 +1377,16 @@ static int32_t free_page(int32_t bin_idx,
 	 */
 	if ((gsl_spf_ss_state_get(master_proc_id) & page->spf_ss_mask) !=
 		page->spf_ss_mask) {
-		while (sys_id < AR_SUB_SYS_ID_LAST) {
+		/*
+		 * ss_id_list is packed: entries 0..num_sys_id-1, sys id in
+		 * proc_id. Index by position, not by sys id.
+		 */
+		for (sys_id = 0; sys_id < page->shmem_info.num_sys_id; ++sys_id) {
 			if (page->ss_id_list[sys_id].proc_type == DYNAMIC_PD) {
 				GSL_DBG("set pd down flag for proc_id %d",
 					page->ss_id_list[sys_id].proc_id);
 				page->ss_id_list[sys_id].is_active = FALSE;
 			}
-			++sys_id;
 		}
 	}
 	/* if this is a CMA page, hyp-unassign here */
@@ -1693,14 +1769,21 @@ int32_t gsl_shmem_unmap_allocation(struct gsl_shmem_alloc_data *alloc_data,
 	uint32_t ss_mask_to_unmap_to)
 {
 	int32_t rc = AR_EOK;
-	struct gsl_shmem_page *page = alloc_data->handle;
-	uint32_t master_proc_id = page->master_proc;
+	struct gsl_shmem_page *page = NULL;
+
+	if (!alloc_data || !alloc_data->handle)
+		return AR_EBADPARAM;
+	page = alloc_data->handle;
 
 	rc = gsl_shmem_unmap_page_from_spf(page, ss_mask_to_unmap_to);
-	if (rc)
+	if (rc) {
 		GSL_ERR("failed to unmap page from spf %d", rc);
+		return rc;
+	}
 
-	ar_shmem_unmap(&page->shmem_info);
+	rc = ar_shmem_unmap(&page->shmem_info);
+	if (rc)
+		GSL_ERR("ar_shmem_unmap failed %d", rc);
 
 	return rc;
 }
@@ -1824,7 +1907,13 @@ void gsl_shmem_remap_pre_alloc(uint32_t master_proc_id)
 	while (iter !=
 		&ctxt[master_proc_id]->bins[GSL_SHMEM_MGR_BIN_IDX_PRE_ALLOC_SCRATCH]
 			.page_list.dummy) {
-		page = (struct gsl_shmem_page *) iter;
+		/*
+		 * iter points at the node member inside the page, not at
+		 * the page itself. get_container_base() subtracts the
+		 * offset of node to get the page. A plain cast only works
+		 * while node is the first member of struct gsl_shmem_page.
+		 */
+		page = get_container_base(iter, struct gsl_shmem_page, node);
 		gsl_shmem_map_page_to_spf(page, 0, page->spf_ss_mask);
 		iter = iter->next;
 	}
@@ -2046,6 +2135,7 @@ int32_t gsl_shmem_map_dynamic_pd(struct gsl_shmem_alloc_data *alloc_data,
 		--dyn_pd_cnt;
 		page->ss_id_list[page->shmem_info.num_sys_id].proc_id =
 			dyn_pd_list[dyn_pd_cnt];
+		page->ss_id_list[page->shmem_info.num_sys_id].is_active = TRUE;
 		page->ss_id_list[page->shmem_info.num_sys_id++].proc_type =
 			DYNAMIC_PD;
 	}
@@ -2080,8 +2170,10 @@ int32_t gsl_shmem_unmap_dynamic_pd(struct gsl_shmem_alloc_data *alloc_data,
 			page->ss_id_list[page->shmem_info.num_sys_id].proc_type =
 				DYNAMIC_PD;
 			/* Skip unmap command to DSP if proc is down */
-			if ((gsl_spf_ss_state_get(page->master_proc) & ss_mask) != ss_mask)
-				page->ss_id_list[page->shmem_info.num_sys_id].is_active = FALSE;
+			page->ss_id_list[page->shmem_info.num_sys_id].is_active =
+				GSL_TEST_SPF_SS_BIT(
+					gsl_spf_ss_state_get(page->master_proc), sys_id) ?
+				TRUE : FALSE;
 			++page->shmem_info.num_sys_id;
 		}
 		++sys_id;
@@ -2106,6 +2198,8 @@ int32_t gsl_shmem_unmap_dynamic_pd(struct gsl_shmem_alloc_data *alloc_data,
 			continue;
 		page->ss_id_list[page->shmem_info.num_sys_id].proc_id =
 			ss_id_list[j].proc_id;
+		page->ss_id_list[page->shmem_info.num_sys_id].is_active =
+			ss_id_list[j].is_active;
 		page->ss_id_list[page->shmem_info.num_sys_id++].proc_type =
 			ss_id_list[j].proc_type;
 	}
@@ -2178,9 +2272,15 @@ int32_t gsl_shmem_init(uint32_t num_procs, uint32_t *procs, uint32_t num_master_
 		return rc;
 	}
 
+	rc = ar_osal_mutex_create(&shm_map_table_lock);
+	if (rc) {
+		GSL_ERR("shm map table mutex create failed %d", rc);
+		goto deregister;
+	}
+
 	rc = ar_shmem_init();
 	if (rc)
-		goto deregister;
+		goto destroy_shm_map_lock;
 
 	for (; i < num_procs; i++) {
 		__gpr_cmd_is_shared_mem_supported(procs[i],
@@ -2251,11 +2351,16 @@ int32_t gsl_shmem_init(uint32_t num_procs, uint32_t *procs, uint32_t num_master_
 		}
 
 		if (is_master) {
-			allocate_page(GSL_SHMEM_PRE_ALLOC_SIZE,
+			rc = allocate_page(GSL_SHMEM_PRE_ALLOC_SIZE,
 				GSL_SHMEM_MGR_BIN_IDX_PRE_ALLOC_SCRATCH,
 				GSL_GET_SPF_SS_MASK(procs[i]), 0, 0,
 				GSL_EXT_MEM_HDL_NOT_ALLOCD,
 				procs[i], &page);
+			if (rc) {
+				GSL_ERR("pre-alloc page for proc %d failed %d",
+					procs[i], rc);
+				rc = AR_EOK;
+			}
 			}
 
 	}
@@ -2269,8 +2374,27 @@ cleanup_mutex:
 	if (ctxt[procs[i]])
 		ar_osal_mutex_destroy(ctxt[procs[i]]->mutex);
 cleanup:
+	/*
+	 * Procs 0..i-1 finished setup: each has a signal and may already
+	 * own a mapped pre-alloc page. Release them like gsl_shmem_deinit()
+	 * does, or free_ctxt below leaks the signal, the page and its DSP
+	 * mapping.
+	 */
 	for (j = 0; j < i; j++) {
 		if (ctxt[procs[j]]) {
+			ar_list_node_t *iter = NULL, *iter_look_ahead = NULL;
+			struct gsl_shmem_bin *pre_alloc_bin =
+				&ctxt[procs[j]]->bins[GSL_SHMEM_MGR_BIN_IDX_PRE_ALLOC_SCRATCH];
+
+			iter = pre_alloc_bin->page_list.dummy.next;
+			while (iter != &pre_alloc_bin->page_list.dummy) {
+				/* free_page() unlinks iter; save next */
+				iter_look_ahead = iter->next;
+				page = get_container_base(iter, struct gsl_shmem_page, node);
+				free_page(GSL_SHMEM_MGR_BIN_IDX_PRE_ALLOC_SCRATCH, page, 0);
+				iter = iter_look_ahead;
+			}
+			gsl_signal_destroy(&ctxt[procs[j]]->sig);
 			ar_osal_mutex_destroy(ctxt[procs[j]]->sig_lock);
 			ar_osal_mutex_destroy(ctxt[procs[j]]->mutex);
 		}
@@ -2282,6 +2406,9 @@ free_ctxt:
 			ctxt[procs[j]] = NULL;
 		}
 	}
+destroy_shm_map_lock:
+	ar_osal_mutex_destroy(shm_map_table_lock);
+	shm_map_table_lock = NULL;
 deregister:
 	__gpr_cmd_deregister(GSL_SHMEM_SRC_PORT);
 exit:
@@ -2329,6 +2456,18 @@ int32_t gsl_shmem_deinit(void)
 		gsl_mem_free(ctxt[i]);
 		ctxt[i] = NULL;
 	}
+
+	GSL_MUTEX_LOCK(shm_map_table_lock);
+	gsl_mem_free(shm_map_table);
+	shm_map_table = NULL;
+	shm_map_count = 0;
+	shm_map_capacity = 0;
+	GSL_MUTEX_UNLOCK(shm_map_table_lock);
+
+	rc = ar_osal_mutex_destroy(shm_map_table_lock);
+	if (rc && !rc1)
+		rc1 = rc;
+	shm_map_table_lock = NULL;
 
 	rc = ar_shmem_deinit();
 	if (rc && !rc1)

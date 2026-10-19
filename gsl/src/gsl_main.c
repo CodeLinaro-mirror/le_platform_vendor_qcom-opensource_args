@@ -1187,8 +1187,9 @@ msg_builder_deinit:
 spf_ss_state_deinit:
 	for (j = 0; j < num_master_procs; j++)
 		gsl_spf_ss_state_deinit(master_procs[j]);
+	i = 0;
 mdf_utils_deinit:
-	for (; j < i; j++)
+	for (j = 0; j < i; j++)
 		gsl_spf_ss_state_deinit(master_procs[j]);
 	gsl_mdf_utils_deinit();
 gpr_deregister:
