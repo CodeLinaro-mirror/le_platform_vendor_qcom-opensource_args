@@ -28,7 +28,7 @@
 #include "audtp.h"
 #include "actp.h"
 
-#if defined(__INTEGRITY) || defined(PLATFORM_LY)
+#if defined(__INTEGRITY) || defined(PLATFORM_LY) || defined(__QNX__)
 #include "Diag_LSM.h"
 #else
 #include "diag_lsm.h"

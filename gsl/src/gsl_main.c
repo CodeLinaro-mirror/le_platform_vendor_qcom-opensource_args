@@ -504,6 +504,7 @@ static void gsl_main_ssr_callback(enum spf_ss_state_t state,
 	struct gsl_graph *graph;
 	bool_t master_proc_ssr = gsl_mdf_utils_is_master_proc(spf_ss_mask);
 	uint32_t master_proc = gsl_mdf_utils_get_master_proc_id(spf_ss_mask);
+	bool_t fire_dn, fire_up;
 
 	/*
 	 * Invalid subsystem mask.
@@ -587,9 +588,11 @@ static void gsl_main_ssr_callback(enum spf_ss_state_t state,
 		ar_err_det_reset_ctxt(master_proc);
 
 		/* issue callback to client */
-		if (gsl_ctxt.global_cb)
-			gsl_ctxt.global_cb(GSL_GLOBAL_EVENT_AUDIO_SVC_DN, &client_pld,
-			sizeof(client_pld), gsl_ctxt.global_cb_client_data);
+		fire_dn = gsl_spf_ss_state_fire_dn_event(master_proc, spf_ss_mask);
+		if (fire_dn && gsl_ctxt.global_cb)
+			gsl_ctxt.global_cb(GSL_GLOBAL_EVENT_AUDIO_SVC_DN,
+				&client_pld, sizeof(client_pld),
+				gsl_ctxt.global_cb_client_data);
 		/* free the handle_list memory  */
 		if (client_pld.handle_list)
 			gsl_mem_free(client_pld.handle_list);
@@ -601,9 +604,10 @@ static void gsl_main_ssr_callback(enum spf_ss_state_t state,
 		}
 
 		/* issue callback to client */
-		if (gsl_ctxt.global_cb)
-			gsl_ctxt.global_cb(GSL_GLOBAL_EVENT_AUDIO_SVC_UP, NULL, 0,
-			gsl_ctxt.global_cb_client_data);
+		fire_up = gsl_spf_ss_state_fire_up_event(master_proc, spf_ss_mask);
+		if (fire_up && gsl_ctxt.global_cb)
+			gsl_ctxt.global_cb(GSL_GLOBAL_EVENT_AUDIO_SVC_UP,
+				NULL, 0, gsl_ctxt.global_cb_client_data);
 	}
 }
 
@@ -1768,6 +1772,54 @@ int32_t gsl_ioctl(gsl_handle_t graph_handle,
 			GSL_ERR("configure write params ioctl failed %d", rc);
 		break;
 
+	case GSL_CMD_CONFIGURE_DP_READ_PARAMS: {
+		struct gsl_cmd_configure_datapath_read_write_params *dp_rdcfg =
+			(struct gsl_cmd_configure_datapath_read_write_params *)cmd_payload;
+
+		if (cmd_payload_sz < sizeof(struct gsl_cmd_configure_datapath_read_write_params)) {
+			rc = AR_EBADPARAM;
+			GSL_ERR("cfg dp read params ioctl, inv payload size %d expected >=%zu",
+				cmd_payload_sz,
+				sizeof(struct gsl_cmd_configure_datapath_read_write_params));
+			break;
+		}
+		if ((dp_rdcfg->attributes & GSL_ATTRIBUTES_DATA_MODE_MASK) !=
+			GSL_DATA_MODE_EXTERN_PUSH_PULL) {
+			rc = AR_EBADPARAM;
+			GSL_ERR("cfg dp read params: data_mode must be EXTERN_PUSH_PULL");
+			break;
+		}
+		rc = gsl_graph_config_data_path(graph, GSL_DATA_DIR_READ,
+			(struct gsl_cmd_configure_read_write_params *)dp_rdcfg);
+		if (rc)
+			GSL_ERR("configure dp read params ioctl failed %d", rc);
+		break;
+	}
+
+	case GSL_CMD_CONFIGURE_DP_WRITE_PARAMS: {
+		struct gsl_cmd_configure_datapath_read_write_params *dp_wrcfg =
+			(struct gsl_cmd_configure_datapath_read_write_params *)cmd_payload;
+
+		if (cmd_payload_sz < sizeof(struct gsl_cmd_configure_datapath_read_write_params)) {
+			rc = AR_EBADPARAM;
+			GSL_ERR("cfg dp write params ioctl, inv payload size %d expected >=%zu",
+				cmd_payload_sz,
+				sizeof(struct gsl_cmd_configure_datapath_read_write_params));
+			break;
+		}
+		if ((dp_wrcfg->attributes & GSL_ATTRIBUTES_DATA_MODE_MASK) !=
+			GSL_DATA_MODE_EXTERN_PUSH_PULL) {
+			rc = AR_EBADPARAM;
+			GSL_ERR("cfg dp write params: data_mode must be EXTERN_PUSH_PULL");
+			break;
+		}
+		rc = gsl_graph_config_data_path(graph, GSL_DATA_DIR_WRITE,
+			(struct gsl_cmd_configure_read_write_params *)dp_wrcfg);
+		if (rc)
+			GSL_ERR("configure dp write params ioctl failed %d", rc);
+		break;
+	}
+
 	case GSL_CMD_GET_READ_BUFF_INFO:
 		if (cmd_payload_sz < sizeof(struct gsl_cmd_get_shmem_buf_info)) {
 			rc = AR_EBADPARAM;
@@ -2396,3 +2448,4 @@ exit:
 	GSL_MUTEX_UNLOCK(gsl_ctxt.acdb_client_lock);
 	return rc;
 }
+
