@@ -39,6 +39,10 @@ endif()
 add_definitions(-DSESSION_ARRAY_SIZE=200)
 add_definitions(-Dstrlcat=g_strlcat)
 
+if(DEFINED GPR_GEN5)
+    add_definitions(-DGPR_GEN5)
+endif()
+
 add_library(ar-gpr SHARED ${gpr_SOURCE})
 target_link_libraries(ar-gpr PUBLIC ar-osal glink_client)
 
@@ -55,4 +59,3 @@ set(pkgconfigdir ${libdir}/pkgconfig)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/gpr.pc.in ${CMAKE_CURRENT_BINARY_DIR}/gpr.pc @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gpr.pc DESTINATION ${pkgconfigdir})
-
