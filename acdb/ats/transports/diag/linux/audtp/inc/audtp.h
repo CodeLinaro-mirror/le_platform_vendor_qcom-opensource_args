@@ -39,9 +39,15 @@
       | Macros and type defs |
       --------------------
  */
-#define LOCAL_DIAG_MAX_RX_PKT_SIZ 15 * 1024
-
 #define DIAG_MAX_PKT_HEADER_SIZ 0x20
+#if defined(__QNX__)
+/* Cap TX packet at the QNX diag limit, less header headroom for the framing
+ * diagpkt_commit/actp.c add (else diagpkt_commit fails with WriteFile -1). */
+#define LOCAL_DIAG_MAX_RX_PKT_SIZ (DIAG_MAX_TX_PKT_SIZ - DIAG_MAX_PKT_HEADER_SIZ)
+#else
+#define LOCAL_DIAG_MAX_RX_PKT_SIZ (15 * 1024)
+#endif
+
 /**< Maximum Diag request packet size*/
 #define DIAG_REQ_PKT_SIZE (LOCAL_DIAG_MAX_RX_PKT_SIZ - DIAG_MAX_PKT_HEADER_SIZ)
 /**< Maximum Diag response packet size*/

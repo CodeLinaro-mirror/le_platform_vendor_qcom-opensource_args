@@ -27,6 +27,7 @@ set(spf_includes
     api/modules/audio_hw_clk_api.h
     api/modules/audio_hw_dma_api.h
     api/modules/audio_hw_lpm_api.h
+    api/modules/audio_if_api.h
     api/modules/codec_dma_api.h
     api/modules/common_enc_dec_api.h
     api/modules/data_logging_api.h

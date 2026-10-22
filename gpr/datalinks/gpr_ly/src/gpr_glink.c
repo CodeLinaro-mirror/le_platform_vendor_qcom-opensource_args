@@ -255,13 +255,7 @@ static void gpr_glink_state_cb(glink_handle_type        handle, /* handle for th
    dest_domain_id = port->domain_id;
    port_name      = port->port_name;
 
-   AR_MSG(DBG_HIGH_PRIO, "gpr_glink_state_cb: dest_domain_id %lu, event = 0x%x  port_name:", dest_domain_id, event);
-   uint32_t c = 0;
-   while (port_name[c] != '\0')
-   {
-      AR_MSG(DBG_HIGH_PRIO, "%d", port_name[c]);
-      c++;
-   }
+   AR_MSG(DBG_HIGH_PRIO, "gpr_glink_state_cb: dest_domain_id %lu, event = 0x%x port_name: %s", dest_domain_id, event, port_name);
 
    glink_handle = port->glink_handle;
    switch (event)
@@ -329,14 +323,7 @@ static void gpr_glink_state_cb(glink_handle_type        handle, /* handle for th
                   ((dest_domain_id == port_data_info.glink_port_data[i].domain_id_1) ? port_data_info.glink_port_data[i].domain_name_1
                                                                       : port_data_info.glink_port_data[i].domain_name_2);
                // Reopen the glink channel
-               AR_MSG(DBG_HIGH_PRIO, "Glink entry found with remote ss:");
-
-               c = 0;
-               while (remote_ss[c] != '\0')
-               {
-                  AR_MSG(DBG_HIGH_PRIO, "%d", remote_ss[c]);
-                  c++;
-               }
+               AR_MSG(DBG_HIGH_PRIO, "Glink entry found with remote ss: %s", remote_ss);
 
                rc = gpr_glink_open(port_data_info.glink_port_data[i].port_name,
                                    sizeof(port_data_info.glink_port_data[i].port_name),
@@ -392,23 +379,14 @@ void gpr_ipc_glink_link_state_cb(glink_link_info_type *link_info, void *priv)
       return;
    }
 
-   AR_MSG(DBG_HIGH_PRIO, "GPR Glink gpr_ipc_glink_link_state_cb: dest_domain_id %lu remote ss:", port->domain_id);
+   AR_MSG(DBG_HIGH_PRIO,
+          "GPR Glink gpr_ipc_glink_link_state_cb: dest_domain_id %lu remote ss: %s",
+          port->domain_id,
+          link_info->remote_ss);
 
-   uint32_t c = 0;
-   while (link_info->remote_ss[c] != '\0')
-   {
-      AR_MSG(DBG_HIGH_PRIO, "%d", link_info->remote_ss[c]);
-      c++;
-   }
-
-   AR_MSG(DBG_HIGH_PRIO, "GPR Glink gpr_ipc_glink_link_state_cb: port_name: ");
-
-   c = 0;
-   while (port->port_name[c] != '\0')
-   {
-      AR_MSG(DBG_HIGH_PRIO, "%d", port->port_name[c]);
-      c++;
-   }
+   AR_MSG(DBG_HIGH_PRIO,
+          "GPR Glink gpr_ipc_glink_link_state_cb: port_name: %s",
+          port->port_name);
 
    // Check to make sure entry is there
    for (uint32_t i = 0; i < port_data_info.gpr_glink_port_pairs; i++)
@@ -498,17 +476,11 @@ GPR_INTERNAL uint32_t gpr_glink_init(uint32_t src_domain_id, uint32_t dest_domai
           gpr_glink_port_pool[dest_domain_id].domain_id,
           gpr_glink_port_pool[dest_domain_id].port_name);
 
-   uint32_t c = 0;
-   while (gpr_glink_port_pool[dest_domain_id].port_name[c] != '\0')
-   {
-      AR_MSG(DBG_HIGH_PRIO, "%d", gpr_glink_port_pool[dest_domain_id].port_name[c]);
-      c++;
-   }
    link_id.link_notifier = (glink_link_state_notif_cb)gpr_ipc_glink_link_state_cb;
    err                   = glink_register_link_state_cb(&link_id, (void *)&gpr_glink_port_pool[dest_domain_id]);
    if (err == GLINK_STATUS_SUCCESS)
    {
-      AR_MSG(DBG_ERROR_PRIO, "gpr_glink_init: Successfully register linkstate cb, domain_id: %lu", dest_domain_id);
+      AR_MSG(DBG_HIGH_PRIO, "gpr_glink_init: Successfully register linkstate cb, domain_id: %lu", dest_domain_id);
    }
    else
    {
@@ -519,7 +491,7 @@ GPR_INTERNAL uint32_t gpr_glink_init(uint32_t src_domain_id, uint32_t dest_domai
 
 GPR_INTERNAL uint32_t gpr_glink_deinit(uint32_t domain_id)
 {
-   AR_MSG(DBG_ERROR_PRIO, "gpr_glink_deinit() Inside DEINIT");
+   AR_MSG(DBG_HIGH_PRIO, "gpr_glink_deinit() Inside DEINIT");
    return gpr_glink_close(domain_id);
 }
 
@@ -572,7 +544,7 @@ GPR_INTERNAL uint32_t gpr_glink_open(char_t *port_name, uint32_t port_name_size,
       port->state = GPR_GLINK_DISCONNECTED;
       return AR_EFAILED;
    }
-   AR_MSG(DBG_ERROR_PRIO, "gpr_glink_open() with port handle %lu DONE.", domain_id);
+   AR_MSG(DBG_HIGH_PRIO, "gpr_glink_open() with port handle %lu DONE.", domain_id);
    return AR_EOK;
 }
 

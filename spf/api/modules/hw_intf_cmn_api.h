@@ -6,14 +6,9 @@
  *  	
  * 
  * \copyright
- *  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- *  SPDX-License-Identifier: BSD-3-Clause-Clear
+ *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *  SPDX-License-Identifier: BSD-3-Clause
  */
-// clang-format off
-/*
-$Header: //components/rel/avs.fwk/1.0/api/modules/hw_intf_cmn_api.h#25 $
-*/
-// clang-format on
 
 #include "module_cmn_api.h"
 #include "audio_hw_clk_api.h"
@@ -39,9 +34,23 @@ typedef enum lpaif_type_t
   LPAIF_AUD         = 5,
   LPAIF_SDR         = 6,
   LPAIF_WSA2        = 7,
+  LPAIF_RXTX_SDCA   = 8,
+  LPAIF_RXTX_WSA    = 9,
+  LPAIF_QAIF_AUD    = 10,
+  LPAIF_QAIF_VA     = 11,
   MAX_NUM_LPAIF_TYPES,
   LPAIF_BLK_INVALID = 0x7FFFFFFF
 } lpaif_type_t;
+
+
+typedef enum qaif_type_t
+{
+  QAIF_AUD      = 0,     // Default type
+  QAIF_VA        = 1,
+  MAX_NUM_QAIF_TYPES,
+  QAIF_BLK_INVALID = 0x7FFFFFFF
+}qaif_type_t;
+
 
 /*==============================================================================
    Type definitions

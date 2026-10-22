@@ -768,7 +768,7 @@ static void gsl_graph_check_ckvs(struct gsl_key_vector *gkv, struct gsl_key_vect
 	int ckv_count = 0;
 	int rc = AR_EOK;
 
-	rsp.list_size = 0;
+	memset(&rsp, 0, sizeof(rsp));
 	rc = gsl_get_graph_ckvs(gkv, (void *)&rsp);
 	if (rc) {
 		GSL_ERR("gsl_get_graph_ckvs failed: %d", rc);
@@ -1080,6 +1080,12 @@ static int32_t gsl_graph_send_persist_cal(struct gsl_graph *graph,
 				goto free_sg_proc_ids;
 			}
 			sg->num_proc_ids = rsp.sg_proc_ids->num_proc_ids;
+			if (sg->num_proc_ids > AR_SUB_SYS_ID_LAST) {
+				GSL_ERR("num_proc_ids %d exceeds max array size %d",
+				sg->num_proc_ids, AR_SUB_SYS_ID_LAST);
+				rc = AR_EBADPARAM;
+				goto free_sg_proc_ids;
+			}
 			GSL_DBG("num procs - %d", sg->num_proc_ids);
 			for (int procid = 0; procid < sg->num_proc_ids; procid++) {
 				sg->persist_cal_data_per_proc[procid].proc_id = rsp.sg_proc_ids->proc_ids[procid];
