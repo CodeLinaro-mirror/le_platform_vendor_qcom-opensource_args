@@ -227,7 +227,7 @@ int32_t ar_shmem_alloc(_Inout_ ar_shmem_info *info)
   {
     total_size = (info->buf_size + AR_OSAL_SHMEM_ALIGNMENT - 1)&~(AR_OSAL_SHMEM_ALIGNMENT - 1);
 
-    asmmu = audio_smmu_helper_create(NULL);
+    asmmu = audio_smmu_helper_create();
     if (asmmu == NULL)
     {
       AR_LOG_ERR(AR_OSAL_SHMEM_LOG_TAG, "audio_smmu_helper_create failed");
@@ -408,7 +408,7 @@ int32_t ar_shmem_map(_Inout_ ar_shmem_info *info)
      *and pass it on to the audio smmu helper.
      */
 
-    asmmu = audio_smmu_helper_create(NULL);
+    asmmu = audio_smmu_helper_create();
     if (asmmu == NULL)
     {
       AR_LOG_ERR(AR_OSAL_SHMEM_LOG_TAG, "audio_smmu_helper_create failed");
