@@ -855,6 +855,32 @@ int32_t gsl_set_custom_config(gsl_handle_t graph_handle,
 	const uint8_t *payload, const uint32_t payload_size);
 
 /**
+ * \brief Set a custom configuration parameter on a tagged module using a
+ * caller-provided shared-memory region already mapped with SPF.
+ *
+ * \param[in] graph_handle: graph handle returned from gsl_open
+ * \param[in] tag: identifies a module instance matching the tag ID
+ * \param[in] spf_mmap_handle: SPF shared-memory map handle
+ * \param[in] spf_addr: SPF-visible payload address
+ * \param[in,out] v_addr: process-local payload address. GSL writes the
+ * resolved MIID into this mapped payload before sending the command to SPF.
+ * \param[in] payload_size: size of payload in bytes. Must be at least
+ * sizeof(uint32_t) and not exceed UINT32_MAX.
+ *
+ * \return AR_EOK on success. Returns AR_EBADPARAM for invalid input,
+ * including null v_addr, payload_size smaller than sizeof(uint32_t),
+ * payload_size greater than UINT32_MAX, zero tag, invalid graph handle, or
+ * missing spf_mmap_handle.
+ * Returns AR_EUNSUPPORTED when shared memory is not supported for the
+ * target processor, AR_ENOTEXIST when no module matches the tag, and
+ * AR_ESUBSYSRESET when the graph is in error state. Other GSL or SPF
+ * errors may be returned by lower layers.
+ */
+int32_t gsl_set_tagged_custom_config_v2(gsl_handle_t graph_handle, uint32_t tag,
+	uint32_t spf_mmap_handle, uint64_t spf_addr, void *v_addr,
+	const size_t payload_size);
+
+/**
  * \brief Set a custom configuration parameter on a specified graph, the
  * payload is provided from the caller. Caller also provides tag ID so gsl
  * can look up ACDB for the module IID to which this payload needs to be

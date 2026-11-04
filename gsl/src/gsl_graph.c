@@ -1867,6 +1867,102 @@ int32_t gsl_graph_set_custom_config(struct gsl_graph *graph,
 	return rc;
 }
 
+int32_t gsl_graph_set_tagged_custom_config_v2(struct gsl_graph *graph,
+	uint32_t tag, uint32_t spf_mmap_handle, uint64_t spf_addr, void *v_addr,
+	const size_t payload_size, ar_osal_mutex_t lock)
+{
+	int32_t rc = AR_EOK;
+	struct apm_cmd_header_t *cmd_header;
+	struct gsl_module_id_info *module_info = NULL;
+	struct gsl_sgid_list sg_id_list = {0, NULL};
+	gpr_packet_t *send_pkt = NULL;
+	uint32_t i, module_info_size = 0;
+	bool_t is_shmem_supported = TRUE;
+
+	rc = __gpr_cmd_is_shared_mem_supported(graph->proc_id, &is_shmem_supported);
+	if (!is_shmem_supported)
+		return AR_EUNSUPPORTED;
+	else if (rc) {
+		GSL_ERR("GPR is shmem supported failed %d", rc)
+		goto exit;
+	}
+
+	if (!v_addr || !spf_mmap_handle ||
+		payload_size < sizeof(uint32_t) ||
+		payload_size > UINT32_MAX || (tag == 0)) {
+		rc = AR_EBADPARAM;
+		goto exit;
+	}
+
+	rc = gsl_graph_get_sgids_and_objs(graph, &sg_id_list, NULL);
+	if (rc) {
+		GSL_ERR("get sgidlist failed %d", rc);
+		goto exit;
+	}
+	if (!sg_id_list.sg_ids) {
+		rc = AR_ENOTEXIST;
+		goto exit;
+	}
+
+	GSL_MUTEX_LOCK(lock);
+	GSL_MUTEX_LOCK(graph->get_set_cfg_lock);
+
+	rc = _gsl_graph_get_module_tag_info(sg_id_list.sg_ids, sg_id_list.len,
+		tag, &module_info, &module_info_size);
+	if (rc) {
+		GSL_ERR("fail to get tagged module iid %d", rc);
+		goto cleanup;
+	}
+
+	for (i = 0; i < module_info->num_modules; ++i) {
+		rc = gsl_allocate_gpr_packet(APM_CMD_SET_CFG, graph->src_port,
+			module_info->module_entry[i].module_iid, sizeof(*cmd_header), 0,
+			graph->proc_id, &send_pkt);
+		if (rc) {
+			GSL_ERR("Failed to allocate GPR packet %d", rc);
+			goto free_mem;
+		}
+
+		cmd_header = GPR_PKT_GET_PAYLOAD(struct apm_cmd_header_t, send_pkt);
+		cmd_header->mem_map_handle = spf_mmap_handle;
+		cmd_header->payload_address_lsw = (uint32_t)spf_addr;
+		cmd_header->payload_address_msw =
+			(uint32_t)(spf_addr >> 32);
+		cmd_header->payload_size = (uint32_t)payload_size;
+
+		/* clients don't know MIID. Set it here */
+		rc = gsl_memcpy(v_addr, payload_size,
+			&module_info->module_entry[i].module_iid, sizeof(uint32_t));
+		if (rc)
+			goto free_pkt;
+
+		GSL_LOG_PKT("send_pkt", graph->src_port, send_pkt,
+			sizeof(*send_pkt) + sizeof(*cmd_header),
+			v_addr, payload_size);
+
+		rc = gsl_send_spf_cmd_wait_for_basic_rsp(&send_pkt,
+			&graph->graph_signal[GRAPH_CTRL_GRP2_CMD_SIG]);
+		if (rc) {
+			GSL_ERR("Graph set tagged custom config v2 failed:%d, miid: 0x%x", rc,
+				module_info->module_entry[i].module_iid);
+			goto free_pkt;
+		}
+	}
+
+	goto free_mem;
+free_pkt:
+	if (send_pkt)
+		__gpr_cmd_free(send_pkt);
+free_mem:
+	gsl_mem_free(module_info);
+cleanup:
+	GSL_MUTEX_UNLOCK(graph->get_set_cfg_lock);
+	GSL_MUTEX_UNLOCK(lock);
+	gsl_mem_free(sg_id_list.sg_ids);
+exit:
+	return rc;
+}
+
 int32_t gsl_graph_get_custom_config(struct gsl_graph *graph,
 	uint8_t *payload, uint32_t payload_size, ar_osal_mutex_t lock)
 {
