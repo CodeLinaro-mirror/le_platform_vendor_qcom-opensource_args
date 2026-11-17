@@ -367,10 +367,12 @@ int32_t gsl_mdf_utils_get_supported_ss_info_from_acdb(void)
 
 exit:
 	gsl_mem_free(acdb_rsp.buf);
-	if (rc && _gsl_glb_mdf_info.ss_groups)
-		 free(_gsl_glb_mdf_info.ss_groups);
-	if (rc && _gsl_glb_mdf_info.pd_info)
-		 free(_gsl_glb_mdf_info.pd_info);
+	if (rc != AR_EOK) {
+		/* undo a partial load so a retry starts clean */
+		gsl_mem_free(_gsl_glb_mdf_info.ss_groups);
+		gsl_mem_free(_gsl_glb_mdf_info.pd_info);
+		gsl_memset(&_gsl_glb_mdf_info, 0, sizeof(_gsl_glb_mdf_info));
+	}
 
 	return rc;
 }
@@ -657,12 +659,17 @@ int32_t gsl_mdf_utils_deregister_dynamic_pd(uint32_t ss_mask,
 
 int32_t gsl_mdf_utils_init(void)
 {
+	int32_t rc = AR_EOK;
+
 	if (!is_initialized) {
 		gsl_memset(&_gsl_glb_mdf_info, 0, sizeof(_gsl_glb_mdf_info));
 		is_initialized = TRUE;
-		return gsl_mdf_utils_get_supported_ss_info_from_acdb();
+		rc = gsl_mdf_utils_get_supported_ss_info_from_acdb();
+		if (rc != AR_EOK) {
+			is_initialized = FALSE;
+		}
 	}
-	return AR_EOK;
+	return rc;
 }
 
 int32_t gsl_mdf_utils_deinit(void)
