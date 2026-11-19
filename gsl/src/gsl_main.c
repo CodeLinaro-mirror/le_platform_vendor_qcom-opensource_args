@@ -5,8 +5,8 @@
  *      Main entry point for Graph Service Layer (GSL)
  *
  * \copyright
- * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "gsl_intf.h"
 #include "acdb.h"

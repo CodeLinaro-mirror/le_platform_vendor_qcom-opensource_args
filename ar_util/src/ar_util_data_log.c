@@ -5,8 +5,8 @@
 *      Defines platform agnostic APIs for logging data through a data
 *      transport(diag, tcpip, etc...)
 * \copyright
-*  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-*  SPDX-License-Identifier: BSD-3-Clause-Clear
+*  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+*  SPDX-License-Identifier: BSD-3-Clause
 */
 
 #include "ar_util_log_pkt_i.h"

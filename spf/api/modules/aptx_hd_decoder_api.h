@@ -2,8 +2,8 @@
   @file aptx_hd_decoder_api.h
   @brief This file contains aptx HD decoder APIs
 
-  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-  SPDX-License-Identifier: BSD-3-Clause-Clear
+  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+  SPDX-License-Identifier: BSD-3-Clause
 ==============================================================================*/
 
 #ifndef _APTX_HD_DECODER_H_

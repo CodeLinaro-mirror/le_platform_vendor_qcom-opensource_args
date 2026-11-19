@@ -2,8 +2,8 @@
   @file aptx-adaptive3-ble-encoder-api.h
   @brief This file contains aptX Adaptive 3.0 LE encoder APIs
 
-  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-  SPDX-License-Identifier: BSD-3-Clause-Clear
+  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+  SPDX-License-Identifier: BSD-3-Clause
 ==============================================================================*/
 
 #ifndef _APTX_ADAPTIVE3_BLE_ENCODER_API_H_

@@ -4,7 +4,7 @@
  * This file has implementation platform wrapper for the GPR datalink layer
  *
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "ar_msg.h"
 #include "gpr_api_i.h"

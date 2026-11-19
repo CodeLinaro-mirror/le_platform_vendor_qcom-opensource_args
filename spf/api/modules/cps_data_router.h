@@ -2,8 +2,8 @@
 #define __SP_CPS_DATA_ROUTER_H__
 
 /*==============================================================================
- *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *  SPDX-License-Identifier: BSD-3-Clause-Clear
+ *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *  SPDX-License-Identifier: BSD-3-Clause
 
   @file cps_data_router.h
   @brief This file contains APIs for Speaker Protection Module

@@ -4,7 +4,7 @@
  *      Defines the boot-state API.
  *
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 #ifndef AR_OSAL_BOOT_H

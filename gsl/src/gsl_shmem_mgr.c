@@ -5,8 +5,8 @@
  *      Manages shared memory allocations across all graphs in the system
  *
  * \copyright
- * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <stdint.h>
 #include "gsl_shmem_mgr.h"

@@ -3,8 +3,8 @@
  *
  * This file has implementation platform wrapper for the GPR datalink layer
  *
- *  Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
- *  SPDX-License-Identifier: BSD-3-Clause-Clear
+ *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *  SPDX-License-Identifier: BSD-3-Clause
  */
 #define LOG_TAG "gpr_lx_wrapper"
 #include <errno.h>

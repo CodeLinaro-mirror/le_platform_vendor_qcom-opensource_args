@@ -5,8 +5,8 @@
   @file cop_v2_depacketizer_api.h
   @brief This file contains cop depack module v2 APIs
 
-  Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-  SPDX-License-Identifier: BSD-3-Clause-Clear
+  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+  SPDX-License-Identifier: BSD-3-Clause
 ==============================================================================*/
 // clang-format off
 /* =========================================================================
